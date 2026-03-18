@@ -119,7 +119,7 @@ export function History() {
     <div className="flex flex-col gap-4 pb-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
           Histórico
         </h1>
         <Button variant="ghost" size="sm" onClick={handleExport}>
@@ -133,10 +133,10 @@ export function History() {
         <motion.button
           onClick={() => navigateMonth(-1)}
           whileTap={{ scale: 0.9 }}
-          className="p-2 rounded-xl transition-colors"
+          className="p-2.5 rounded-xl transition-colors"
           style={{ backgroundColor: 'var(--bg-input)' }}
         >
-          <ChevronLeft size={20} style={{ color: 'var(--text-primary)' }} />
+          <ChevronLeft size={22} style={{ color: 'var(--text-primary)' }} />
         </motion.button>
         <p
           className="text-base font-semibold capitalize"
@@ -147,10 +147,10 @@ export function History() {
         <motion.button
           onClick={() => navigateMonth(1)}
           whileTap={{ scale: 0.9 }}
-          className="p-2 rounded-xl transition-colors"
+          className="p-2.5 rounded-xl transition-colors"
           style={{ backgroundColor: 'var(--bg-input)' }}
         >
-          <ChevronRight size={20} style={{ color: 'var(--text-primary)' }} />
+          <ChevronRight size={22} style={{ color: 'var(--text-primary)' }} />
         </motion.button>
       </div>
 
@@ -190,7 +190,7 @@ export function History() {
               )}
             </div>
           </div>
-          <div className="h-56 mt-4 relative">
+          <div className="h-44 sm:h-56 mt-4 relative">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                 <defs>

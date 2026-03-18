@@ -21,10 +21,10 @@ export function MonthSummaryCard({ summary }: MonthSummaryCardProps) {
           </p>
           <button
             onClick={() => setIsVisible(!isVisible)}
-            className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+            className="p-2.5 -m-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
             style={{ color: 'var(--text-muted)' }}
           >
-            {isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+            {isVisible ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
         {/* Elegant Currency Display */}
@@ -36,7 +36,7 @@ export function MonthSummaryCard({ summary }: MonthSummaryCardProps) {
             {isVisible ? (
               <motion.span
                 key="visible"
-                className="text-4xl font-bold"
+                className="text-3xl sm:text-4xl font-bold"
                 style={{ 
                   letterSpacing: '-0.05em',
                   color: 'var(--text-primary)',
@@ -51,7 +51,7 @@ export function MonthSummaryCard({ summary }: MonthSummaryCardProps) {
             ) : (
               <motion.span
                 key="hidden"
-                className="text-4xl font-bold tracking-widest translate-y-[-2px]"
+                className="text-3xl sm:text-4xl font-bold tracking-widest translate-y-[-2px]"
                 style={{ color: 'var(--text-primary)' }}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}

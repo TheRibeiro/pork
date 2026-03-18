@@ -50,7 +50,7 @@ function AppContent() {
       <div className="noise-overlay" />
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto px-4 pt-4 pb-24 safe-top relative z-10">
+      <main className="flex-1 overflow-y-auto px-4 pt-4 pb-20 safe-top relative z-10">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -68,14 +68,16 @@ function AppContent() {
         </AnimatePresence>
       </main>
 
-      {/* FAB - Add Expense (Manifesto §3 - whileTap) */}
+      {/* FAB - Add Expense */}
       <motion.button
         onClick={() => setShowExpenseForm(true)}
         whileTap={{ scale: 0.92 }}
         whileHover={{ scale: 1.05 }}
         transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-        className="fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full flex items-center justify-center shadow-xl"
+        className="fixed z-30 w-14 h-14 rounded-full flex items-center justify-center shadow-xl"
         style={{
+          bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))',
+          right: '1rem',
           background: 'linear-gradient(135deg, #6366f1, #a855f7)',
           boxShadow: '0 8px 32px rgba(99, 102, 241, 0.35)',
         }}
@@ -102,7 +104,7 @@ function AppContent() {
                 onClick={() => setActiveTab(id)}
                 whileTap={{ scale: 0.9 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl"
+                className="flex flex-col items-center gap-0.5 py-2 px-4 rounded-xl min-w-[48px]"
               >
                 <Icon
                   size={22}

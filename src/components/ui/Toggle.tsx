@@ -13,7 +13,7 @@ export function Toggle({ enabled, onChange, label }: ToggleProps) {
       role="switch"
       aria-checked={enabled}
       onClick={() => onChange(!enabled)}
-      className="flex items-center gap-3"
+      className="flex items-center gap-3 min-h-[44px]"
     >
       <div
         className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${

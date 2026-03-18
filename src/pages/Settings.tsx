@@ -54,7 +54,7 @@ export function Settings() {
       animate="animate"
     >
       <motion.h1
-        className="text-2xl font-bold tracking-tight"
+        className="text-xl sm:text-2xl font-bold tracking-tight"
         style={{ color: 'var(--text-primary)' }}
         variants={itemVariants}
       >

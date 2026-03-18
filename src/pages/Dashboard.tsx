@@ -45,7 +45,7 @@ export function Dashboard() {
     >
       {/* Header — Elegant Typography (Manifesto §1) */}
       <motion.div variants={itemVariants}>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
           BolsoCheio
         </h1>
         <p className="text-sm capitalize" style={{ color: 'var(--text-muted)' }}>

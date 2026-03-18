@@ -91,8 +91,8 @@
 }
 
 .mesh-blob-1 {
-  width: 400px;
-  height: 400px;
+  width: min(400px, 80vw);
+  height: min(400px, 80vw);
   background: #6366f1;
   top: -100px;
   right: -100px;
@@ -100,8 +100,8 @@
 }
 
 .mesh-blob-2 {
-  width: 350px;
-  height: 350px;
+  width: min(350px, 70vw);
+  height: min(350px, 70vw);
   background: #a855f7;
   bottom: 20%;
   left: -120px;
@@ -109,8 +109,8 @@
 }
 
 .mesh-blob-3 {
-  width: 300px;
-  height: 300px;
+  width: min(300px, 60vw);
+  height: min(300px, 60vw);
   background: #22c55e;
   bottom: -80px;
   right: 10%;
@@ -205,7 +205,7 @@
 
 /* ===== CUSTOM SCROLLBAR ===== */
 ::-webkit-scrollbar {
-  width: 3px;
+  width: 4px;
 }
 
 ::-webkit-scrollbar-track {

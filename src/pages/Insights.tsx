@@ -90,8 +90,8 @@ export function Insights() {
     >
       {/* Header */}
       <motion.div variants={itemVariants}>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-          <Sparkles size={24} className="text-[var(--color-primary)]" />
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <Sparkles size={22} className="text-[var(--color-primary)]" />
           Insights IA
         </h1>
         <p className="text-sm capitalize" style={{ color: 'var(--text-muted)' }}>
@@ -153,15 +153,15 @@ export function Insights() {
             <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
               Distribuição por Categoria
             </h3>
-            <div className="h-48">
+            <div className="h-44 sm:h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={pieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
+                    innerRadius={40}
+                    outerRadius={70}
                     paddingAngle={3}
                     dataKey="value"
                     stroke="none"
