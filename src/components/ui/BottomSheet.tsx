@@ -52,7 +52,7 @@ export function BottomSheet({ open, onClose, children, title }: BottomSheetProps
               </div>
             )}
 
-            <div className="px-6 pb-8 overflow-y-auto flex-1 min-h-0">{children}</div>
+            <div className="px-6 pb-24 overflow-y-auto flex-1 min-h-0">{children}</div>
           </motion.div>
         </>
       )}
