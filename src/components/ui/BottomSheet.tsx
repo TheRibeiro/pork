@@ -23,7 +23,7 @@ export function BottomSheet({ open, onClose, children, title }: BottomSheetProps
             onClick={onClose}
           />
           <motion.div
-            className="fixed bottom-0 left-0 right-0 z-50 max-h-[92vh] overflow-y-auto rounded-t-3xl safe-bottom"
+            className="fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] flex flex-col rounded-t-3xl safe-bottom"
             style={{
               backgroundColor: 'var(--bg-card)',
               borderTop: '1px solid rgba(255, 255, 255, 0.05)',
@@ -34,7 +34,7 @@ export function BottomSheet({ open, onClose, children, title }: BottomSheetProps
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           >
             {/* Handle */}
-            <div className="sticky top-0 z-10 pt-3 pb-2 flex justify-center" style={{ backgroundColor: 'var(--bg-card)' }}>
+            <div className="pt-3 pb-2 flex justify-center shrink-0">
               <div
                 className="w-10 h-1.5 rounded-full"
                 style={{ backgroundColor: 'var(--text-muted)', opacity: 0.4 }}
@@ -42,7 +42,7 @@ export function BottomSheet({ open, onClose, children, title }: BottomSheetProps
             </div>
 
             {title && (
-              <div className="px-6 pb-3">
+              <div className="px-6 pb-3 shrink-0">
                 <h2
                   className="text-lg font-semibold tracking-tight"
                   style={{ color: 'var(--text-primary)' }}
@@ -52,7 +52,7 @@ export function BottomSheet({ open, onClose, children, title }: BottomSheetProps
               </div>
             )}
 
-            <div className="px-6 pb-8">{children}</div>
+            <div className="px-6 pb-8 overflow-y-auto flex-1 min-h-0">{children}</div>
           </motion.div>
         </>
       )}

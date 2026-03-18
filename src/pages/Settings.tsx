@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Moon, Sun, CreditCard, Wallet, ChevronRight, LogOut, User } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Moon, Sun, CreditCard, Wallet, ChevronRight, LogOut, User, Download } from 'lucide-react'
 import { motion, type Variants } from 'framer-motion'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
@@ -29,6 +29,11 @@ const itemVariants: Variants = {
   },
 }
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
+
 export function Settings() {
   const { settings, updateSettings, updateEnvelope, theme, toggleTheme } = useApp()
   const { user, profile, isOnline, signOut } = useAuth()
@@ -36,6 +41,28 @@ export function Settings() {
   const [showEnvelopes, setShowEnvelopes] = useState(false)
   const [closingDay, setClosingDay] = useState(String(settings.creditCard.closingDay))
   const [dueDay, setDueDay] = useState(String(settings.creditCard.dueDay))
+  const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null)
+  const [canInstall, setCanInstall] = useState(false)
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault()
+      deferredPrompt.current = e as BeforeInstallPromptEvent
+      setCanInstall(true)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  async function handleInstall() {
+    if (!deferredPrompt.current) return
+    deferredPrompt.current.prompt()
+    const { outcome } = await deferredPrompt.current.userChoice
+    if (outcome === 'accepted') {
+      setCanInstall(false)
+    }
+    deferredPrompt.current = null
+  }
 
   function saveCardConfig() {
     const closing = Math.min(Math.max(parseInt(closingDay) || 1, 1), 31)
@@ -211,6 +238,33 @@ export function Settings() {
           )}
         </Card>
       </motion.div>
+
+      {/* Instalar App */}
+      {canInstall && (
+        <motion.div variants={itemVariants}>
+          <Card>
+            <motion.button
+              onClick={handleInstall}
+              whileTap={{ scale: 0.97 }}
+              className="flex items-center justify-between w-full p-3 rounded-xl transition-colors"
+              style={{ backgroundColor: 'var(--bg-input)' }}
+            >
+              <div className="flex items-center gap-3">
+                <Download size={20} style={{ color: 'var(--color-primary)' }} />
+                <div className="text-left">
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                    Instalar Aplicativo
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                    Adicione à tela inicial do celular
+                  </p>
+                </div>
+              </div>
+              <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
+            </motion.button>
+          </Card>
+        </motion.div>
+      )}
 
       {/* About */}
       <motion.div variants={itemVariants}>
