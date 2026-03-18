@@ -1,25 +1,43 @@
-import { Trash2 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Card } from '../ui/Card'
+import { Receipt } from 'lucide-react'
+import { motion, AnimatePresence, type Variants } from 'framer-motion'
+import { EmptyState } from '../ui/EmptyState'
 import { formatCurrency, formatDate } from '../../lib/utils'
 import { CATEGORY_CONFIG, PAYMENT_METHOD_LABELS } from '../../types'
 import type { Expense } from '../../types'
 
 interface RecentExpensesProps {
   expenses: Expense[]
-  onDelete: (id: string) => void
+  onClick: (expense: Expense) => void
 }
 
-export function RecentExpenses({ expenses, onDelete }: RecentExpensesProps) {
+const listVariants: Variants = {
+  animate: {
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+}
+
+const itemVariants: Variants = {
+  initial: { opacity: 0, y: 10 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring' as const, stiffness: 400, damping: 30 },
+  },
+  exit: { opacity: 0, x: 30, transition: { duration: 0.2 } },
+}
+
+export function RecentExpenses({ expenses, onClick }: RecentExpensesProps) {
   const recent = expenses.slice(0, 10)
 
   if (recent.length === 0) {
     return (
-      <Card>
-        <p className="text-sm text-center py-6" style={{ color: 'var(--text-muted)' }}>
-          Nenhum gasto recente. Toque em + para adicionar.
-        </p>
-      </Card>
+      <EmptyState
+        icon={<Receipt size={28} style={{ color: 'var(--color-primary)' }} />}
+        title="Nenhum gasto recente"
+        description="Toque no + para registrar seu primeiro gasto"
+      />
     )
   }
 
@@ -31,7 +49,12 @@ export function RecentExpenses({ expenses, onDelete }: RecentExpensesProps) {
       >
         Últimos Gastos
       </h3>
-      <div className="flex flex-col gap-2">
+      <motion.div
+        className="flex flex-col gap-2"
+        variants={listVariants}
+        initial="initial"
+        animate="animate"
+      >
         <AnimatePresence>
           {recent.map((expense) => {
             const config = CATEGORY_CONFIG[expense.category]
@@ -39,50 +62,61 @@ export function RecentExpenses({ expenses, onDelete }: RecentExpensesProps) {
               <motion.div
                 key={expense.id}
                 layout
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="flex items-center gap-3 p-3 rounded-xl"
+                variants={itemVariants}
+                exit="exit"
+                whileTap={{ scale: 0.98 }}
+                onClick={() => onClick(expense)}
+                className="flex items-center gap-3 p-3.5 rounded-2xl transition-colors cursor-pointer"
                 style={{
                   backgroundColor: 'var(--bg-card)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
                   border: '1px solid var(--border-color)',
                 }}
               >
                 <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-                  style={{ backgroundColor: config.color + '15' }}
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl shrink-0"
+                  style={{ 
+                    backgroundColor: config.color + '15',
+                    border: `1px solid ${config.color}20`
+                  }}
                 >
                   {config.emoji}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p
-                    className="text-sm font-medium truncate"
+                    className="text-[15px] font-semibold truncate mb-0.5"
                     style={{ color: 'var(--text-primary)' }}
                   >
                     {expense.title}
                   </p>
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                    {formatDate(expense.date)} · {PAYMENT_METHOD_LABELS[expense.paymentMethod]}
-                    {expense.isRecurring && ' · 🔄'}
+                  <p className="text-[11px] font-medium tracking-wide uppercase" style={{ color: 'var(--text-muted)' }}>
+                    {formatDate(expense.date).substring(0, 5)} • {PAYMENT_METHOD_LABELS[expense.paymentMethod]}
+                    {expense.isRecurring && ' • 🔄'}
                   </p>
                 </div>
-                <p
-                  className="text-sm font-bold shrink-0"
-                  style={{ color: 'var(--text-primary)' }}
-                >
-                  -{formatCurrency(expense.amount)}
-                </p>
-                <button
-                  onClick={() => onDelete(expense.id)}
-                  className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors shrink-0"
-                >
-                  <Trash2 size={14} className="text-red-400" />
-                </button>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <div 
+                    className="px-2.5 py-1 rounded-lg border flex items-center"
+                    style={{ 
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)', 
+                      borderColor: 'rgba(239, 68, 68, 0.2)' 
+                    }}
+                  >
+                    <span
+                      className="text-xs font-bold"
+                      style={{ color: '#f87171' }}
+                    >
+                      -{formatCurrency(expense.amount).replace('R$', '').trim()}
+                    </span>
+                  </div>
+                </div>
               </motion.div>
             )
           })}
         </AnimatePresence>
-      </div>
+      </motion.div>
     </div>
   )
 }

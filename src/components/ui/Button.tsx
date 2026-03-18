@@ -1,6 +1,8 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { motion } from 'framer-motion'
+import type { ReactNode } from 'react'
+import type { HTMLMotionProps } from 'framer-motion'
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends HTMLMotionProps<"button"> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
   size?: 'sm' | 'md' | 'lg'
   children: ReactNode
@@ -24,14 +26,19 @@ export function Button({
   size = 'md',
   children,
   className = '',
+  disabled,
   ...props
 }: ButtonProps) {
   return (
-    <button
-      className={`font-medium transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none ${variants[variant]} ${sizes[size]} ${variant === 'secondary' ? 'bg-[var(--bg-input)]' : ''} ${className}`}
+    <motion.button
+      whileTap={disabled ? undefined : { scale: 0.96 }}
+      whileHover={disabled ? undefined : { scale: 1.02 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+      className={`font-medium transition-colors duration-200 disabled:opacity-50 disabled:pointer-events-none ${variants[variant]} ${sizes[size]} ${variant === 'secondary' ? 'bg-[var(--bg-input)]' : ''} ${className}`}
+      disabled={disabled}
       {...props}
     >
       {children}
-    </button>
+    </motion.button>
   )
 }

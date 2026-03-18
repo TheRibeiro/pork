@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion'
+
 interface ToggleProps {
   enabled: boolean
   onChange: (enabled: boolean) => void
@@ -19,10 +21,10 @@ export function Toggle({ enabled, onChange, label }: ToggleProps) {
         }`}
         style={!enabled ? { backgroundColor: 'var(--bg-input)' } : undefined}
       >
-        <div
-          className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-200 ${
-            enabled ? 'translate-x-5' : 'translate-x-0'
-          }`}
+        <motion.div
+          className="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md"
+          animate={{ x: enabled ? 20 : 0 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
         />
       </div>
       {label && (

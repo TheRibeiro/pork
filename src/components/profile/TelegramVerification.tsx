@@ -9,7 +9,7 @@ import { supabase } from '../../lib/supabase'
 const BOT_USERNAME = 'LeofinancaTeste_bot'
 
 export function TelegramVerification() {
-  const { profile, updateProfile, refreshProfile } = useAuth()
+  const { profile, refreshProfile } = useAuth()
   const [step, setStep] = useState<'idle' | 'waiting' | 'verified'>(
     profile?.is_telegram_verified ? 'verified' : 'idle'
   )

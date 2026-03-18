@@ -1,3 +1,4 @@
+import { motion, type Variants } from 'framer-motion'
 import { Card } from '../ui/Card'
 import { formatCurrency, getEnvelopeColor } from '../../lib/utils'
 import { CATEGORY_CONFIG } from '../../types'
@@ -6,6 +7,23 @@ import type { Category, Envelope, MonthSummary } from '../../types'
 interface CategoryBreakdownProps {
   summary: MonthSummary
   envelopes: Envelope[]
+}
+
+const listVariants: Variants = {
+  animate: {
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+}
+
+const itemVariants: Variants = {
+  initial: { opacity: 0, x: -10 },
+  animate: {
+    opacity: 1,
+    x: 0,
+    transition: { type: 'spring' as const, stiffness: 400, damping: 30 },
+  },
 }
 
 export function CategoryBreakdown({ summary, envelopes }: CategoryBreakdownProps) {
@@ -28,7 +46,12 @@ export function CategoryBreakdown({ summary, envelopes }: CategoryBreakdownProps
       <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
         Gastos por Categoria
       </h3>
-      <div className="flex flex-col gap-3">
+      <motion.div
+        className="flex flex-col gap-3"
+        variants={listVariants}
+        initial="initial"
+        animate="animate"
+      >
         {categories.map(([category, spent]) => {
           const config = CATEGORY_CONFIG[category]
           const envelope = envelopes.find((e) => e.category === category)
@@ -37,7 +60,7 @@ export function CategoryBreakdown({ summary, envelopes }: CategoryBreakdownProps
           const barColor = hasLimit ? getEnvelopeColor(spent, envelope.limit) : config.color
 
           return (
-            <div key={category}>
+            <motion.div key={category} variants={itemVariants}>
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <span className="text-base">{config.emoji}</span>
@@ -62,20 +85,22 @@ export function CategoryBreakdown({ summary, envelopes }: CategoryBreakdownProps
                 className="h-2 rounded-full overflow-hidden"
                 style={{ backgroundColor: 'var(--bg-input)' }}
               >
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ backgroundColor: barColor }}
+                  initial={{ width: 0 }}
+                  animate={{
                     width: hasLimit
                       ? `${percentage}%`
                       : `${Math.min((spent / summary.totalSpent) * 100, 100)}%`,
-                    backgroundColor: barColor,
                   }}
+                  transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.2 }}
                 />
               </div>
-            </div>
+            </motion.div>
           )
         })}
-      </div>
+      </motion.div>
     </Card>
   )
 }

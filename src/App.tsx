@@ -19,21 +19,46 @@ const tabs: { id: Tab; label: string; icon: typeof Home }[] = [
   { id: 'settings', label: 'Config', icon: SettingsIcon },
 ]
 
+// Page transition variants (Manifesto §2)
+const pageVariants = {
+  initial: { opacity: 0, y: 20, scale: 1 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: -8, scale: 0.98 },
+}
+
+const pageTransition = {
+  type: 'spring' as const,
+  stiffness: 400,
+  damping: 30,
+  mass: 1,
+}
+
 function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>('home')
   const [showExpenseForm, setShowExpenseForm] = useState(false)
 
   return (
-    <div className="min-h-dvh flex flex-col" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div className="min-h-dvh flex flex-col relative" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      {/* Mesh Gradient Blobs (Manifesto §1) */}
+      <div className="mesh-gradient-container">
+        <div className="mesh-blob mesh-blob-1" />
+        <div className="mesh-blob mesh-blob-2" />
+        <div className="mesh-blob mesh-blob-3" />
+      </div>
+
+      {/* Noise Grain Overlay (Manifesto §1) */}
+      <div className="noise-overlay" />
+
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto px-4 pt-4 pb-24 safe-top">
+      <main className="flex-1 overflow-y-auto px-4 pt-4 pb-24 safe-top relative z-10">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.15 }}
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransition}
           >
             {activeTab === 'home' && <Dashboard />}
             {activeTab === 'history' && <History />}
@@ -43,22 +68,28 @@ function AppContent() {
         </AnimatePresence>
       </main>
 
-      {/* FAB - Add Expense */}
-      <button
+      {/* FAB - Add Expense (Manifesto §3 - whileTap) */}
+      <motion.button
         onClick={() => setShowExpenseForm(true)}
-        className="fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+        whileTap={{ scale: 0.92 }}
+        whileHover={{ scale: 1.05 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+        className="fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full flex items-center justify-center shadow-xl"
         style={{
           background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+          boxShadow: '0 8px 32px rgba(99, 102, 241, 0.35)',
         }}
       >
         <Plus size={24} className="text-white" />
-      </button>
+      </motion.button>
 
-      {/* Bottom Tab Bar */}
+      {/* Bottom Tab Bar — Glassmorphism (Manifesto §4) */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-20 safe-bottom"
+        className="fixed bottom-0 left-0 right-0 z-20 safe-bottom glass dark:glass"
         style={{
-          backgroundColor: 'var(--bg-card)',
+          backgroundColor: 'color-mix(in srgb, var(--bg-card) 70%, transparent)',
+          backdropFilter: 'blur(40px)',
+          WebkitBackdropFilter: 'blur(40px)',
           borderTop: '1px solid var(--border-color)',
         }}
       >
@@ -66,22 +97,26 @@ function AppContent() {
           {tabs.map(({ id, label, icon: Icon }) => {
             const isActive = activeTab === id
             return (
-              <button
+              <motion.button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all"
+                whileTap={{ scale: 0.9 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl"
               >
                 <Icon
                   size={22}
                   strokeWidth={isActive ? 2.5 : 1.5}
                   style={{
                     color: isActive ? 'var(--color-primary)' : 'var(--text-muted)',
+                    transition: 'color 0.2s',
                   }}
                 />
                 <span
                   className="text-[10px] font-medium"
                   style={{
                     color: isActive ? 'var(--color-primary)' : 'var(--text-muted)',
+                    transition: 'color 0.2s',
                   }}
                 >
                   {label}
@@ -91,9 +126,10 @@ function AppContent() {
                     layoutId="tab-indicator"
                     className="w-5 h-0.5 rounded-full mt-0.5"
                     style={{ backgroundColor: 'var(--color-primary)' }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   />
                 )}
-              </button>
+              </motion.button>
             )
           })}
         </div>
@@ -111,24 +147,44 @@ function AuthGate() {
   if (loading) {
     return (
       <div
-        className="min-h-dvh flex items-center justify-center"
+        className="min-h-dvh flex items-center justify-center relative"
         style={{ backgroundColor: 'var(--bg-primary)' }}
       >
+        {/* Mesh Gradient behind loader */}
+        <div className="mesh-gradient-container">
+          <div className="mesh-blob mesh-blob-1" />
+          <div className="mesh-blob mesh-blob-2" />
+        </div>
+        <div className="noise-overlay" />
+
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center gap-3"
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          className="flex flex-col items-center gap-4 relative z-10"
         >
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-bold"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}
+          <motion.div
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-xl font-bold"
+            style={{
+              background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+              boxShadow: '0 8px 32px rgba(99, 102, 241, 0.35)',
+            }}
           >
             B$
+          </motion.div>
+          <div className="flex gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: 'var(--color-primary)' }}
+                animate={{ opacity: [0.3, 1, 0.3] }}
+                transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
+              />
+            ))}
           </div>
-          <div
-            className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin"
-            style={{ borderColor: 'var(--color-primary)', borderTopColor: 'transparent' }}
-          />
         </motion.div>
       </div>
     )

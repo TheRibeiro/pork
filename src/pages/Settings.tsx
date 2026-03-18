@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Moon, Sun, CreditCard, Wallet, ChevronRight, LogOut, User } from 'lucide-react'
+import { motion, type Variants } from 'framer-motion'
 import { Card } from '../components/ui/Card'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
@@ -10,6 +11,23 @@ import { TelegramVerification } from '../components/profile/TelegramVerification
 import { CATEGORY_CONFIG } from '../types'
 import type { Category } from '../types'
 import { formatCurrency } from '../lib/utils'
+
+const containerVariants: Variants = {
+  animate: {
+    transition: {
+      staggerChildren: 0.06,
+    },
+  },
+}
+
+const itemVariants: Variants = {
+  initial: { opacity: 0, y: 12 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring' as const, stiffness: 400, damping: 30 },
+  },
+}
 
 export function Settings() {
   const { settings, updateSettings, updateEnvelope, theme, toggleTheme } = useApp()
@@ -29,159 +47,189 @@ export function Settings() {
   }
 
   return (
-    <div className="flex flex-col gap-4 pb-4">
-      <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+    <motion.div
+      className="flex flex-col gap-4 pb-4"
+      variants={containerVariants}
+      initial="initial"
+      animate="animate"
+    >
+      <motion.h1
+        className="text-2xl font-bold tracking-tight"
+        style={{ color: 'var(--text-primary)' }}
+        variants={itemVariants}
+      >
         Configurações
-      </h1>
+      </motion.h1>
 
       {/* Perfil do Usuário (só quando logado) */}
       {isOnline && user && (
-        <Card>
-          <div className="flex items-center gap-3 mb-3">
-            <div
-              className="w-12 h-12 rounded-full flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}
+        <motion.div variants={itemVariants}>
+          <Card>
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                  boxShadow: '0 4px 16px rgba(99, 102, 241, 0.3)',
+                }}
+              >
+                <User size={20} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                  {profile?.full_name || 'Usuário'}
+                </p>
+                <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                  {user.email}
+                </p>
+              </div>
+            </div>
+            <motion.button
+              onClick={signOut}
+              whileTap={{ scale: 0.97 }}
+              className="flex items-center gap-2 w-full p-2.5 rounded-xl transition-colors hover:bg-red-500/10"
             >
-              <User size={20} className="text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                {profile?.full_name || 'Usuário'}
-              </p>
-              <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
-                {user.email}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={signOut}
-            className="flex items-center gap-2 w-full p-2.5 rounded-xl transition-colors hover:bg-red-500/10"
-          >
-            <LogOut size={16} className="text-red-400" />
-            <span className="text-sm text-red-400">Sair da conta</span>
-          </button>
-        </Card>
+              <LogOut size={16} className="text-red-400" />
+              <span className="text-sm text-red-400">Sair da conta</span>
+            </motion.button>
+          </Card>
+        </motion.div>
       )}
 
       {/* Telegram Bot (só quando logado) */}
-      {isOnline && user && <TelegramVerification />}
+      {isOnline && user && (
+        <motion.div variants={itemVariants}>
+          <TelegramVerification />
+        </motion.div>
+      )}
 
       {/* Tema */}
-      <Card>
-        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
-          Aparência
-        </h3>
-        <button
-          onClick={toggleTheme}
-          className="flex items-center justify-between w-full p-3 rounded-xl transition-colors"
-          style={{ backgroundColor: 'var(--bg-input)' }}
-        >
-          <div className="flex items-center gap-3">
-            {theme === 'dark' ? (
-              <Moon size={20} style={{ color: 'var(--text-primary)' }} />
-            ) : (
-              <Sun size={20} style={{ color: 'var(--text-primary)' }} />
-            )}
-            <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-              Tema {theme === 'dark' ? 'Escuro' : 'Claro'}
-            </span>
-          </div>
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Toque para alternar
-          </span>
-        </button>
-      </Card>
-
-      {/* Cartão de Crédito */}
-      <Card>
-        <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
-          Cartão de Crédito
-        </h3>
-        <button
-          onClick={() => setShowCardConfig(true)}
-          className="flex items-center justify-between w-full p-3 rounded-xl transition-colors"
-          style={{ backgroundColor: 'var(--bg-input)' }}
-        >
-          <div className="flex items-center gap-3">
-            <CreditCard size={20} style={{ color: 'var(--text-primary)' }} />
-            <div className="text-left">
-              <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                Datas da Fatura
-              </p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                Fecha dia {settings.creditCard.closingDay} · Vence dia{' '}
-                {settings.creditCard.dueDay}
-              </p>
-            </div>
-          </div>
-          <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
-        </button>
-      </Card>
-
-      {/* Envelopes */}
-      <Card>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
-            Teto de Gastos (Envelopes)
+      <motion.div variants={itemVariants}>
+        <Card>
+          <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
+            Aparência
           </h3>
-          <Button variant="ghost" size="sm" onClick={() => setShowEnvelopes(true)}>
-            Editar
-          </Button>
-        </div>
-
-        {settings.envelopes.length === 0 ? (
-          <button
-            onClick={() => setShowEnvelopes(true)}
-            className="flex items-center gap-3 w-full p-3 rounded-xl transition-colors"
+          <motion.button
+            onClick={toggleTheme}
+            whileTap={{ scale: 0.97 }}
+            className="flex items-center justify-between w-full p-3 rounded-xl transition-colors"
             style={{ backgroundColor: 'var(--bg-input)' }}
           >
-            <Wallet size={20} style={{ color: 'var(--text-muted)' }} />
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Nenhum teto definido. Toque para configurar.
-            </p>
-          </button>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {settings.envelopes.map((env) => {
-              const config = CATEGORY_CONFIG[env.category]
-              return (
-                <div
-                  key={env.category}
-                  className="flex items-center justify-between p-2 rounded-lg"
-                  style={{ backgroundColor: 'var(--bg-input)' }}
-                >
-                  <div className="flex items-center gap-2">
-                    <span>{config.emoji}</span>
-                    <span className="text-sm" style={{ color: 'var(--text-primary)' }}>
-                      {config.label}
+            <div className="flex items-center gap-3">
+              {theme === 'dark' ? (
+                <Moon size={20} style={{ color: 'var(--text-primary)' }} />
+              ) : (
+                <Sun size={20} style={{ color: 'var(--text-primary)' }} />
+              )}
+              <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                Tema {theme === 'dark' ? 'Escuro' : 'Claro'}
+              </span>
+            </div>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Toque para alternar
+            </span>
+          </motion.button>
+        </Card>
+      </motion.div>
+
+      {/* Cartão de Crédito */}
+      <motion.div variants={itemVariants}>
+        <Card>
+          <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
+            Cartão de Crédito
+          </h3>
+          <motion.button
+            onClick={() => setShowCardConfig(true)}
+            whileTap={{ scale: 0.97 }}
+            className="flex items-center justify-between w-full p-3 rounded-xl transition-colors"
+            style={{ backgroundColor: 'var(--bg-input)' }}
+          >
+            <div className="flex items-center gap-3">
+              <CreditCard size={20} style={{ color: 'var(--text-primary)' }} />
+              <div className="text-left">
+                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                  Datas da Fatura
+                </p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Fecha dia {settings.creditCard.closingDay} · Vence dia{' '}
+                  {settings.creditCard.dueDay}
+                </p>
+              </div>
+            </div>
+            <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />
+          </motion.button>
+        </Card>
+      </motion.div>
+
+      {/* Envelopes */}
+      <motion.div variants={itemVariants}>
+        <Card>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
+              Teto de Gastos (Envelopes)
+            </h3>
+            <Button variant="ghost" size="sm" onClick={() => setShowEnvelopes(true)}>
+              Editar
+            </Button>
+          </div>
+
+          {settings.envelopes.length === 0 ? (
+            <motion.button
+              onClick={() => setShowEnvelopes(true)}
+              whileTap={{ scale: 0.97 }}
+              className="flex items-center gap-3 w-full p-3 rounded-xl transition-colors"
+              style={{ backgroundColor: 'var(--bg-input)' }}
+            >
+              <Wallet size={20} style={{ color: 'var(--text-muted)' }} />
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                Nenhum teto definido. Toque para configurar.
+              </p>
+            </motion.button>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {settings.envelopes.map((env) => {
+                const config = CATEGORY_CONFIG[env.category]
+                return (
+                  <div
+                    key={env.category}
+                    className="flex items-center justify-between p-2 rounded-lg"
+                    style={{ backgroundColor: 'var(--bg-input)' }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>{config.emoji}</span>
+                      <span className="text-sm" style={{ color: 'var(--text-primary)' }}>
+                        {config.label}
+                      </span>
+                    </div>
+                    <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      {formatCurrency(env.limit)}
                     </span>
                   </div>
-                  <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {formatCurrency(env.limit)}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </Card>
+                )
+              })}
+            </div>
+          )}
+        </Card>
+      </motion.div>
 
       {/* About */}
-      <Card>
-        <div className="text-center py-2">
-          <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-            BolsoCheio
-          </p>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            Finanças Inteligentes · v2.0.0
-          </p>
-          <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-            {isOnline
-              ? 'Dados sincronizados na nuvem'
-              : 'Dados salvos localmente no dispositivo'}
-          </p>
-        </div>
-      </Card>
+      <motion.div variants={itemVariants}>
+        <Card>
+          <div className="text-center py-2">
+            <p className="text-lg font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+              BolsoCheio
+            </p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Finanças Inteligentes · v2.0.0
+            </p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              {isOnline
+                ? 'Dados sincronizados na nuvem'
+                : 'Dados salvos localmente no dispositivo'}
+            </p>
+          </div>
+        </Card>
+      </motion.div>
 
       {/* Card Config Sheet */}
       <BottomSheet
@@ -230,7 +278,7 @@ export function Settings() {
           onClose={() => setShowEnvelopes(false)}
         />
       </BottomSheet>
-    </div>
+    </motion.div>
   )
 }
 

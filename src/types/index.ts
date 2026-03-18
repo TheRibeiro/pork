@@ -25,6 +25,7 @@ export interface Expense {
   tags?: string[]
   isRecurring: boolean
   billingMonth?: string // YYYY-MM format - mês da fatura (para cartão de crédito)
+  source?: string
 }
 
 export interface Envelope {

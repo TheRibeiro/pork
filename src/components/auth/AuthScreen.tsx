@@ -4,6 +4,12 @@ import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { useAuth } from '../../contexts/AuthContext'
 
+const springTransition = {
+  type: 'spring' as const,
+  stiffness: 400,
+  damping: 30,
+}
+
 export function AuthScreen() {
   const { signIn, signUp } = useAuth()
   const [isLogin, setIsLogin] = useState(true)
@@ -34,31 +40,43 @@ export function AuthScreen() {
       if (error) {
         setError(error)
       }
-      // Se "Confirm email" está desabilitado no Supabase, o login é automático
-      // (onAuthStateChange dispara e redireciona para o app)
     }
     setLoading(false)
   }
 
   return (
     <div
-      className="min-h-dvh flex flex-col items-center justify-center px-6"
+      className="min-h-dvh flex flex-col items-center justify-center px-6 relative"
       style={{ backgroundColor: 'var(--bg-primary)' }}
     >
+      {/* Mesh Gradient Background */}
+      <div className="mesh-gradient-container">
+        <div className="mesh-blob mesh-blob-1" />
+        <div className="mesh-blob mesh-blob-2" />
+      </div>
+      <div className="noise-overlay" />
+
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm"
+        transition={{ ...springTransition, stiffness: 300 }}
+        className="w-full max-w-sm relative z-10"
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <div
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ ...springTransition, delay: 0.1 }}
             className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #a855f7)' }}
+            style={{
+              background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+              boxShadow: '0 8px 32px rgba(99, 102, 241, 0.35)',
+            }}
           >
             B$
-          </div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+          </motion.div>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
             BolsoCheio
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
@@ -67,7 +85,10 @@ export function AuthScreen() {
         </div>
 
         {/* Toggle Login/Cadastro */}
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springTransition, delay: 0.2 }}
           className="flex rounded-xl p-1 mb-6"
           style={{ backgroundColor: 'var(--bg-input)' }}
         >
@@ -89,10 +110,16 @@ export function AuthScreen() {
           >
             Criar Conta
           </button>
-        </div>
+        </motion.div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <motion.form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
           <AnimatePresence mode="wait">
             {!isLogin && (
               <motion.div
@@ -100,6 +127,7 @@ export function AuthScreen() {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
+                transition={springTransition}
               >
                 <div className="relative">
                   <User
@@ -179,29 +207,35 @@ export function AuthScreen() {
           </div>
 
           {/* Error/Success */}
-          {error && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-xs text-red-500 text-center px-2"
-            >
-              {error}
-            </motion.p>
-          )}
-          {success && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-xs text-green-500 text-center px-2"
-            >
-              {success}
-            </motion.p>
-          )}
+          <AnimatePresence>
+            {error && (
+              <motion.p
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={springTransition}
+                className="text-xs text-red-500 text-center px-2"
+              >
+                {error}
+              </motion.p>
+            )}
+            {success && (
+              <motion.p
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={springTransition}
+                className="text-xs text-green-500 text-center px-2"
+              >
+                {success}
+              </motion.p>
+            )}
+          </AnimatePresence>
 
           <Button type="submit" size="lg" className="w-full" disabled={loading}>
             {loading ? 'Aguarde...' : isLogin ? 'Entrar' : 'Criar Conta'}
           </Button>
-        </form>
+        </motion.form>
       </motion.div>
     </div>
   )

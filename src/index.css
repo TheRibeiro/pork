@@ -13,9 +13,9 @@
 
 @layer base {
   :root {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f8fafc;
-    --bg-card: #ffffff;
+    --bg-primary: #fafaff;
+    --bg-secondary: #f4f6fa;
+    --bg-card: rgba(255, 255, 255, 0.65);
     --bg-input: #f1f5f9;
     --text-primary: #0f172a;
     --text-secondary: #64748b;
@@ -25,15 +25,15 @@
   }
 
   .dark {
-    --bg-primary: #0f172a;
-    --bg-secondary: #1e293b;
-    --bg-card: #1e293b;
-    --bg-input: #334155;
+    --bg-primary: #08080c;
+    --bg-secondary: #12121c;
+    --bg-card: rgba(20, 20, 32, 0.5);
+    --bg-input: #1e1e2e;
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
     --text-muted: #64748b;
-    --border-color: #334155;
-    --shadow-color: rgba(0, 0, 0, 0.3);
+    --border-color: rgba(255, 255, 255, 0.06);
+    --shadow-color: rgba(0, 0, 0, 0.4);
   }
 
   * {
@@ -51,6 +51,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior: none;
+    position: relative;
+    overflow-x: hidden;
   }
 
   input, select, textarea {
@@ -58,7 +60,141 @@
   }
 }
 
-/* Safe area for PWA */
+/* ===== NOISE GRAIN OVERLAY (Manifesto §1) ===== */
+.noise-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* ===== MESH GRADIENT BLOBS (Manifesto §1) ===== */
+.mesh-gradient-container {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.mesh-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.35;
+  animation: float 20s ease-in-out infinite;
+}
+
+.mesh-blob-1 {
+  width: 400px;
+  height: 400px;
+  background: #6366f1;
+  top: -100px;
+  right: -100px;
+  animation-delay: 0s;
+}
+
+.mesh-blob-2 {
+  width: 350px;
+  height: 350px;
+  background: #a855f7;
+  bottom: 20%;
+  left: -120px;
+  animation-delay: -7s;
+}
+
+.mesh-blob-3 {
+  width: 300px;
+  height: 300px;
+  background: #22c55e;
+  bottom: -80px;
+  right: 10%;
+  animation-delay: -14s;
+  opacity: 0.2;
+}
+
+/* ===== ANIMATED GRADIENT BORDER (Manifesto §1) ===== */
+.animated-border {
+  position: relative;
+  overflow: hidden;
+}
+
+.animated-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(from var(--border-angle, 0deg), #6366f100, #6366f1, #a855f7, #6366f100);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  animation: rotate-border 4s linear infinite;
+}
+
+/* ===== KEYFRAME ANIMATIONS ===== */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  25% { transform: translateY(-20px) translateX(10px); }
+  50% { transform: translateY(10px) translateX(-15px); }
+  75% { transform: translateY(-15px) translateX(5px); }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes pulse-organic {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+@keyframes rotate-border {
+  to { --border-angle: 360deg; }
+}
+
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes float-icon {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* ===== SHIMMER SKELETON (Manifesto §6) ===== */
+.shimmer-skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-input);
+  border-radius: 12px;
+}
+
+.shimmer-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+/* ===== SAFE AREA (PWA) ===== */
 .safe-bottom {
   padding-bottom: max(env(safe-area-inset-bottom), 16px);
 }
@@ -67,9 +203,9 @@
   padding-top: max(env(safe-area-inset-top), 16px);
 }
 
-/* Custom scrollbar */
+/* ===== CUSTOM SCROLLBAR ===== */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 
 ::-webkit-scrollbar-track {
@@ -81,8 +217,23 @@
   border-radius: 4px;
 }
 
-/* Bottom sheet backdrop */
+/* ===== GLASSMORPHISM (Manifesto §4) ===== */
+.glass {
+  background: rgba(10, 10, 15, 0.5);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-light {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* ===== BOTTOM SHEET BACKDROP ===== */
 .backdrop-blur-sheet {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }

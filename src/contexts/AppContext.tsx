@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { Expense, AppSettings, Category, Envelope } from '../types'
-import type { TransactionRow } from '../types/supabase'
 import { loadExpenses, saveExpenses, loadSettings, saveSettings } from '../lib/storage'
 import { supabase } from '../lib/supabase'
 import { calculateBillingMonth } from '../lib/utils'
@@ -37,6 +36,7 @@ function rowToExpense(row: Record<string, unknown>): Expense {
     tags: Array.isArray(row.tags) && row.tags.length > 0 ? row.tags : undefined,
     isRecurring: Boolean(row.is_recurring),
     billingMonth: row.billing_month ? String(row.billing_month) : undefined,
+    source: row.source ? String(row.source) : undefined,
   }
 }
 
