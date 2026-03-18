@@ -3,7 +3,7 @@ import { TrendingDown, TrendingUp, Eye, EyeOff } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card } from '../ui/Card'
 import { NumberTicker } from '../ui/NumberTicker'
-import { calculateBillingMonth, formatCurrency, vibrate } from '../../lib/utils'
+import { formatCurrency, vibrate } from '../../lib/utils'
 import type { MonthSummary } from '../../types'
 
 interface MonthSummaryCardProps {
