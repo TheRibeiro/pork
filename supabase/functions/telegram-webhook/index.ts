@@ -619,6 +619,18 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // --- Safety net: mensagem só de pagamento sem contexto pendente ---
+    // Evita que "pix", "crédito", etc. isolados caiam no Gemini e retornem erro
+    if (!pendingPaymentLog && detectPaymentMethod(messageText) && messageText.trim().split(/\s+/).length <= 4) {
+      await sendTelegramMessage(chatId,
+        '❓ Não encontrei um gasto pendente.\n\n' +
+        'Envie o gasto completo incluindo a forma de pagamento:\n' +
+        '• "Gastei 50 na festa no pix"\n' +
+        '• "Almoço 45 reais débito"'
+      )
+      return new Response('OK', { status: 200 })
+    }
+
     // --- Verificar "cartão" ambíguo ANTES de chamar a IA ---
     if (hasAmbiguousCard(messageText)) {
       // Salva a mensagem como pendente para quando o usuário responder
