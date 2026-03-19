@@ -15,7 +15,7 @@ export function MonthSummaryCard({ summary }: MonthSummaryCardProps) {
   const totalExpenses = summary.totalSpent
 
   return (
-    <Card highlight className="relative overflow-hidden">
+    <Card variant="elevated" className="relative overflow-hidden">
       <div className="pt-1">
         <div className="flex items-center justify-between mb-1">
           <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
@@ -74,8 +74,8 @@ export function MonthSummaryCard({ summary }: MonthSummaryCardProps) {
           animate={{ opacity: 1, x: 0 }}
           transition={{ type: 'spring', stiffness: 400, damping: 30, delay: 0.15 }}
         >
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-500/10">
-            <TrendingDown size={16} className="text-indigo-500" />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-teal-500/10">
+            <TrendingDown size={16} className="text-teal-500" />
           </div>
           <div>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Fixos</p>
@@ -92,8 +92,8 @@ export function MonthSummaryCard({ summary }: MonthSummaryCardProps) {
           animate={{ opacity: 1, x: 0 }}
           transition={{ type: 'spring', stiffness: 400, damping: 30, delay: 0.2 }}
         >
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-500/10">
-            <TrendingUp size={16} className="text-purple-500" />
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-cyan-500/10">
+            <TrendingUp size={16} className="text-cyan-500" />
           </div>
           <div>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Variáveis</p>

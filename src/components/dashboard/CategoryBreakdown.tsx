@@ -82,7 +82,7 @@ export function CategoryBreakdown({ summary, envelopes }: CategoryBreakdownProps
 
               {/* Progress bar */}
               <div
-                className="h-2 rounded-full overflow-hidden"
+                className="h-2.5 rounded-full overflow-hidden"
                 style={{ backgroundColor: 'var(--bg-input)' }}
               >
                 <motion.div

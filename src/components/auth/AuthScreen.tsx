@@ -49,11 +49,8 @@ export function AuthScreen() {
       className="min-h-dvh flex flex-col items-center justify-center px-6 relative"
       style={{ backgroundColor: 'var(--bg-primary)' }}
     >
-      {/* Mesh Gradient Background */}
-      <div className="mesh-gradient-container">
-        <div className="mesh-blob mesh-blob-1" />
-        <div className="mesh-blob mesh-blob-2" />
-      </div>
+      {/* Background */}
+      <div className="ambient-glow" />
       <div className="noise-overlay" />
 
       <motion.div
@@ -70,8 +67,8 @@ export function AuthScreen() {
             transition={{ ...springTransition, delay: 0.1 }}
             className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold"
             style={{
-              background: 'linear-gradient(135deg, #6366f1, #a855f7)',
-              boxShadow: '0 8px 32px rgba(99, 102, 241, 0.35)',
+              background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
+              boxShadow: '0 8px 32px rgba(20, 184, 166, 0.35)',
             }}
           >
             B$

@@ -20,7 +20,6 @@ const tabs: { id: Tab; label: string; icon: typeof Home }[] = [
   { id: 'settings', label: 'Config', icon: SettingsIcon },
 ]
 
-// Page transition variants (Manifesto §2)
 const pageVariants = {
   initial: { opacity: 0, y: 20, scale: 1 },
   animate: { opacity: 1, y: 0, scale: 1 },
@@ -40,14 +39,10 @@ function AppContent() {
 
   return (
     <div className="min-h-dvh flex flex-col relative" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      {/* Mesh Gradient Blobs (Manifesto §1) */}
-      <div className="mesh-gradient-container">
-        <div className="mesh-blob mesh-blob-1" />
-        <div className="mesh-blob mesh-blob-2" />
-        <div className="mesh-blob mesh-blob-3" />
-      </div>
+      {/* Ambient Glow */}
+      <div className="ambient-glow" />
 
-      {/* Noise Grain Overlay (Manifesto §1) */}
+      {/* Noise Grain Overlay */}
       <div className="noise-overlay" />
 
       {/* Main Content */}
@@ -82,14 +77,14 @@ function AppContent() {
         style={{
           bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))',
           right: '1rem',
-          background: 'linear-gradient(135deg, #6366f1, #a855f7)',
-          boxShadow: '0 8px 32px rgba(99, 102, 241, 0.35)',
+          background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
+          boxShadow: '0 8px 32px rgba(20, 184, 166, 0.35)',
         }}
       >
         <Plus size={24} className="text-white" />
       </motion.button>
 
-      {/* Bottom Tab Bar — Glassmorphism (Manifesto §4) */}
+      {/* Bottom Tab Bar */}
       <nav
         className="fixed bottom-0 left-0 right-0 z-20 safe-bottom glass dark:glass"
         style={{
@@ -111,18 +106,27 @@ function AppContent() {
                 }}
                 whileTap={{ scale: 0.9 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                className="flex flex-col items-center gap-0.5 py-2 px-4 rounded-xl min-w-[48px]"
+                className="flex flex-col items-center gap-0.5 py-2 px-4 rounded-xl min-w-[48px] relative"
               >
+                {isActive && (
+                  <motion.div
+                    layoutId="tab-bg"
+                    className="absolute inset-0 rounded-xl"
+                    style={{ backgroundColor: 'rgba(20, 184, 166, 0.1)' }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  />
+                )}
                 <Icon
-                  size={22}
+                  size={24}
                   strokeWidth={isActive ? 2.5 : 1.5}
+                  className="relative z-10"
                   style={{
                     color: isActive ? 'var(--color-primary)' : 'var(--text-muted)',
                     transition: 'color 0.2s',
                   }}
                 />
                 <span
-                  className="text-[10px] font-medium"
+                  className="text-[10px] font-medium relative z-10"
                   style={{
                     color: isActive ? 'var(--color-primary)' : 'var(--text-muted)',
                     transition: 'color 0.2s',
@@ -133,7 +137,7 @@ function AppContent() {
                 {isActive && (
                   <motion.div
                     layoutId="tab-indicator"
-                    className="w-5 h-0.5 rounded-full mt-0.5"
+                    className="w-6 h-1 rounded-full mt-0.5 relative z-10"
                     style={{ backgroundColor: 'var(--color-primary)' }}
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   />
@@ -159,11 +163,7 @@ function AuthGate() {
         className="min-h-dvh flex items-center justify-center relative"
         style={{ backgroundColor: 'var(--bg-primary)' }}
       >
-        {/* Mesh Gradient behind loader */}
-        <div className="mesh-gradient-container">
-          <div className="mesh-blob mesh-blob-1" />
-          <div className="mesh-blob mesh-blob-2" />
-        </div>
+        <div className="ambient-glow" />
         <div className="noise-overlay" />
 
         <motion.div
@@ -177,8 +177,8 @@ function AuthGate() {
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-xl font-bold"
             style={{
-              background: 'linear-gradient(135deg, #6366f1, #a855f7)',
-              boxShadow: '0 8px 32px rgba(99, 102, 241, 0.35)',
+              background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
+              boxShadow: '0 8px 32px rgba(20, 184, 166, 0.35)',
             }}
           >
             B$
@@ -199,7 +199,6 @@ function AuthGate() {
     )
   }
 
-  // If Supabase not configured, run in offline mode (no auth required)
   if (!isOnline) {
     return (
       <AppProvider>
@@ -208,12 +207,10 @@ function AuthGate() {
     )
   }
 
-  // Not authenticated
   if (!user) {
     return <AuthScreen />
   }
 
-  // Authenticated
   return (
     <AppProvider>
       <AppContent />

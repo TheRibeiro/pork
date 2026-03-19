@@ -117,7 +117,7 @@ export function Insights() {
               </div>
               <div className="h-3 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-input)' }}>
                 <motion.div
-                  className="h-full rounded-full bg-indigo-500"
+                  className="h-full rounded-full bg-teal-500"
                   initial={{ width: 0 }}
                   animate={{ width: `${fixedPercent}%` }}
                   transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.3 }}
@@ -135,7 +135,7 @@ export function Insights() {
               </div>
               <div className="h-3 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-input)' }}>
                 <motion.div
-                  className="h-full rounded-full bg-purple-500"
+                  className="h-full rounded-full bg-cyan-500"
                   initial={{ width: 0 }}
                   animate={{ width: `${variablePercent}%` }}
                   transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.4 }}
@@ -173,8 +173,8 @@ export function Insights() {
                   <Tooltip
                     formatter={(value) => formatCurrency(Number(value))}
                     contentStyle={{
-                      backgroundColor: theme === 'dark' ? '#141420' : '#ffffff',
-                      border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.06)' : '#e2e8f0'}`,
+                      backgroundColor: theme === 'dark' ? '#0a0f0e' : '#ffffff',
+                      border: `1px solid ${theme === 'dark' ? 'rgba(20, 184, 166, 0.1)' : '#e2e8f0'}`,
                       borderRadius: '12px',
                       fontSize: '12px',
                       backdropFilter: 'blur(20px)',
@@ -223,7 +223,7 @@ export function Insights() {
                   <div
                     className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.9), rgba(168, 85, 247, 0.9))',
+                      background: 'linear-gradient(135deg, rgba(20, 184, 166, 0.9), rgba(13, 148, 136, 0.9))',
                     }}
                   >
                     <Icon size={16} className="text-white" />

@@ -4,8 +4,8 @@
 
 @theme {
   --font-sans: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --color-primary: #6366f1;
-  --color-primary-light: #818cf8;
+  --color-primary: #14b8a6;
+  --color-primary-light: #2dd4bf;
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
@@ -13,27 +13,27 @@
 
 @layer base {
   :root {
-    --bg-primary: #fafaff;
-    --bg-secondary: #f4f6fa;
-    --bg-card: rgba(255, 255, 255, 0.65);
-    --bg-input: #f1f5f9;
-    --text-primary: #0f172a;
-    --text-secondary: #64748b;
-    --text-muted: #94a3b8;
-    --border-color: #e2e8f0;
-    --shadow-color: rgba(0, 0, 0, 0.05);
+    --bg-primary: #f8fafb;
+    --bg-secondary: #f1f5f4;
+    --bg-card: rgba(255, 255, 255, 0.75);
+    --bg-input: #f0f4f3;
+    --text-primary: #0f1f1c;
+    --text-secondary: #4b6966;
+    --text-muted: #8a9e9b;
+    --border-color: #d8e4e2;
+    --shadow-color: rgba(0, 0, 0, 0.06);
   }
 
   .dark {
-    --bg-primary: #08080c;
-    --bg-secondary: #12121c;
-    --bg-card: rgba(20, 20, 32, 0.5);
-    --bg-input: #1e1e2e;
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
-    --border-color: rgba(255, 255, 255, 0.06);
-    --shadow-color: rgba(0, 0, 0, 0.4);
+    --bg-primary: #080c0b;
+    --bg-secondary: #101816;
+    --bg-card: rgba(16, 24, 22, 0.6);
+    --bg-input: #162220;
+    --text-primary: #f0fdf9;
+    --text-secondary: #94b8b3;
+    --text-muted: #5f807a;
+    --border-color: rgba(20, 184, 166, 0.08);
+    --shadow-color: rgba(0, 0, 0, 0.5);
   }
 
   * {
@@ -60,21 +60,21 @@
   }
 }
 
-/* ===== NOISE GRAIN OVERLAY (Manifesto §1) ===== */
+/* ===== NOISE GRAIN OVERLAY ===== */
 .noise-overlay {
   position: fixed;
   inset: 0;
   z-index: 9999;
   pointer-events: none;
-  opacity: 0.03;
+  opacity: 0.035;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 256px 256px;
 }
 
-/* ===== MESH GRADIENT BLOBS (Manifesto §1) ===== */
-.mesh-gradient-container {
+/* ===== SUBTLE AMBIENT GLOW ===== */
+.ambient-glow {
   position: fixed;
   inset: 0;
   z-index: 0;
@@ -82,43 +82,35 @@
   overflow: hidden;
 }
 
-.mesh-blob {
+.ambient-glow::before {
+  content: '';
   position: absolute;
-  border-radius: 50%;
-  filter: blur(120px);
-  opacity: 0.35;
-  animation: float 20s ease-in-out infinite;
+  width: 600px;
+  height: 600px;
+  top: -200px;
+  right: -200px;
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.06) 0%, transparent 70%);
 }
 
-.mesh-blob-1 {
-  width: min(400px, 80vw);
-  height: min(400px, 80vw);
-  background: #6366f1;
-  top: -100px;
-  right: -100px;
-  animation-delay: 0s;
+.ambient-glow::after {
+  content: '';
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  bottom: -150px;
+  left: -150px;
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.04) 0%, transparent 70%);
 }
 
-.mesh-blob-2 {
-  width: min(350px, 70vw);
-  height: min(350px, 70vw);
-  background: #a855f7;
-  bottom: 20%;
-  left: -120px;
-  animation-delay: -7s;
+.dark .ambient-glow::before {
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.08) 0%, transparent 70%);
 }
 
-.mesh-blob-3 {
-  width: min(300px, 60vw);
-  height: min(300px, 60vw);
-  background: #22c55e;
-  bottom: -80px;
-  right: 10%;
-  animation-delay: -14s;
-  opacity: 0.2;
+.dark .ambient-glow::after {
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.05) 0%, transparent 70%);
 }
 
-/* ===== ANIMATED GRADIENT BORDER (Manifesto §1) ===== */
+/* ===== ANIMATED GRADIENT BORDER ===== */
 .animated-border {
   position: relative;
   overflow: hidden;
@@ -130,7 +122,7 @@
   inset: -2px;
   border-radius: inherit;
   padding: 2px;
-  background: conic-gradient(from var(--border-angle, 0deg), #6366f100, #6366f1, #a855f7, #6366f100);
+  background: conic-gradient(from var(--border-angle, 0deg), #14b8a600, #14b8a6, #0d9488, #14b8a600);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -138,14 +130,18 @@
   animation: rotate-border 4s linear infinite;
 }
 
-/* ===== KEYFRAME ANIMATIONS ===== */
-
-@keyframes float {
-  0%, 100% { transform: translateY(0) translateX(0); }
-  25% { transform: translateY(-20px) translateX(10px); }
-  50% { transform: translateY(10px) translateX(-15px); }
-  75% { transform: translateY(-15px) translateX(5px); }
+/* ===== CARD ELEVATED ===== */
+.card-elevated {
+  border: 1px solid rgba(20, 184, 166, 0.15) !important;
+  box-shadow: 0 4px 24px rgba(20, 184, 166, 0.08), 0 1px 3px var(--shadow-color) !important;
 }
+
+.dark .card-elevated {
+  border: 1px solid rgba(20, 184, 166, 0.12) !important;
+  box-shadow: 0 4px 24px rgba(20, 184, 166, 0.06), 0 1px 3px var(--shadow-color) !important;
+}
+
+/* ===== KEYFRAME ANIMATIONS ===== */
 
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
@@ -172,7 +168,7 @@
   50% { transform: translateY(-8px); }
 }
 
-/* ===== SHIMMER SKELETON (Manifesto §6) ===== */
+/* ===== SHIMMER SKELETON ===== */
 .shimmer-skeleton {
   position: relative;
   overflow: hidden;
@@ -217,16 +213,16 @@
   border-radius: 4px;
 }
 
-/* ===== GLASSMORPHISM (Manifesto §4) ===== */
+/* ===== GLASSMORPHISM ===== */
 .glass {
-  background: rgba(10, 10, 15, 0.5);
+  background: rgba(8, 12, 11, 0.6);
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(20, 184, 166, 0.06);
 }
 
 .glass-light {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);

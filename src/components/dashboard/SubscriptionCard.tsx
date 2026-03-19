@@ -48,8 +48,8 @@ export function SubscriptionCard({ expenses }: SubscriptionCardProps) {
         <div 
           className="w-12 h-12 rounded-[14px] flex items-center justify-center shrink-0"
           style={{ 
-            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))',
-            border: '1px solid rgba(168, 85, 247, 0.2)'
+            background: 'linear-gradient(135deg, rgba(20, 184, 166, 0.1), rgba(13, 148, 136, 0.1))',
+            border: '1px solid rgba(20, 184, 166, 0.2)'
           }}
         >
           <PlayCircle size={24} style={{ color: 'var(--color-primary)' }} />

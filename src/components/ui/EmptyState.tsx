@@ -25,7 +25,7 @@ export function EmptyState({ icon, title, description }: EmptyStateProps) {
         }}
         className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
         style={{
-          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15))',
+          background: 'linear-gradient(135deg, rgba(20, 184, 166, 0.15), rgba(13, 148, 136, 0.15))',
         }}
       >
         {icon}

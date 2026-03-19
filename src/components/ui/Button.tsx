@@ -10,7 +10,7 @@ interface ButtonProps extends HTMLMotionProps<"button"> {
 
 const variants = {
   primary: 'bg-[var(--color-primary)] text-white hover:opacity-90',
-  secondary: 'text-[var(--text-primary)] hover:opacity-80',
+  secondary: 'text-[var(--text-primary)] hover:opacity-80 border border-[var(--border-color)]',
   ghost: 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
   danger: 'bg-[var(--color-danger)] text-white hover:opacity-90',
 }
@@ -34,7 +34,7 @@ export function Button({
       whileTap={disabled ? undefined : { scale: 0.96 }}
       whileHover={disabled ? undefined : { scale: 1.02 }}
       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-      className={`font-medium transition-colors duration-200 disabled:opacity-50 disabled:pointer-events-none ${variants[variant]} ${sizes[size]} ${variant === 'secondary' ? 'bg-[var(--bg-input)]' : ''} ${className}`}
+      className={`font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none ${variants[variant]} ${sizes[size]} ${variant === 'secondary' ? 'bg-[var(--bg-input)]' : ''} ${className}`}
       disabled={disabled}
       {...props}
     >

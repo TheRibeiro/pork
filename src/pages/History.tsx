@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { format, subMonths } from 'date-fns'
-import { Search, Download, ChevronLeft, ChevronRight, FileText } from 'lucide-react'
+import { Search, Download, ChevronLeft, ChevronRight, FileText, Repeat } from 'lucide-react'
 import { ComposedChart, Line, Area, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts'
 import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import { Card } from '../components/ui/Card'
@@ -8,7 +8,7 @@ import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { ExpenseDetailsSheet } from '../components/expenses/ExpenseDetailsSheet'
 import { useApp } from '../contexts/AppContext'
-import type { Expense } from '../types'
+import type { Expense, PaymentMethod } from '../types'
 import {
   calculateMonthSummary,
   formatCurrency,
@@ -36,6 +36,13 @@ const itemVariants: Variants = {
     transition: { type: 'spring' as const, stiffness: 400, damping: 30 },
   },
   exit: { opacity: 0, x: 20, transition: { duration: 0.15 } },
+}
+
+const paymentColors: Record<PaymentMethod, { bg: string; border: string; text: string }> = {
+  credito: { bg: 'rgba(239, 68, 68, 0.1)', border: 'rgba(239, 68, 68, 0.2)', text: '#f87171' },
+  debito: { bg: 'rgba(59, 130, 246, 0.1)', border: 'rgba(59, 130, 246, 0.2)', text: '#60a5fa' },
+  pix: { bg: 'rgba(20, 184, 166, 0.1)', border: 'rgba(20, 184, 166, 0.2)', text: '#2dd4bf' },
+  dinheiro: { bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.2)', text: '#fbbf24' },
 }
 
 export function History() {
@@ -283,6 +290,7 @@ export function History() {
         <AnimatePresence>
           {filteredExpenses.map((expense) => {
             const config = CATEGORY_CONFIG[expense.category]
+            const colors = paymentColors[expense.paymentMethod]
             return (
               <motion.div
                 key={expense.id}
@@ -302,9 +310,9 @@ export function History() {
               >
                 <div
                   className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl shrink-0"
-                  style={{ 
+                  style={{
                     backgroundColor: config.color + '15',
-                    border: `1px solid ${config.color}20` 
+                    border: `1px solid ${config.color}20`
                   }}
                 >
                   {config.emoji}
@@ -316,10 +324,12 @@ export function History() {
                   >
                     {expense.title}
                   </p>
-                  <p className="text-[11px] font-medium tracking-wide uppercase" style={{ color: 'var(--text-muted)' }}>
+                  <p className="text-[11px] font-medium tracking-wide uppercase flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
                     {formatDate(expense.date).substring(0, 5)} • {PAYMENT_METHOD_LABELS[expense.paymentMethod]}
                     {expense.type === 'fixo' && ' • Fixo'}
-                    {expense.isRecurring && ' • 🔄'}
+                    {expense.isRecurring && (
+                      <Repeat size={10} style={{ color: 'var(--color-primary)' }} />
+                    )}
                   </p>
                   {expense.tags && expense.tags.length > 0 && (
                     <div className="flex gap-1 mt-1 flex-wrap">
@@ -340,16 +350,16 @@ export function History() {
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
-                  <div 
+                  <div
                     className="px-2.5 py-1 rounded-lg border flex items-center"
-                    style={{ 
-                      backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-                      borderColor: 'rgba(239, 68, 68, 0.2)' 
+                    style={{
+                      backgroundColor: colors.bg,
+                      borderColor: colors.border
                     }}
                   >
                     <span
                       className="text-xs font-bold"
-                      style={{ color: '#f87171' }}
+                      style={{ color: colors.text }}
                     >
                       -{formatCurrency(expense.amount).replace('R$', '').trim()}
                     </span>

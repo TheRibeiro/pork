@@ -60,7 +60,7 @@ export const CATEGORY_CONFIG: Record<Category, { label: string; color: string; e
   educacao: { label: 'Educação', color: '#14b8a6', emoji: '📚' },
   moradia: { label: 'Moradia', color: '#eab308', emoji: '🏠' },
   vestuario: { label: 'Vestuário', color: '#ec4899', emoji: '👕' },
-  assinaturas: { label: 'Assinaturas', color: '#6366f1', emoji: '📱' },
+  assinaturas: { label: 'Assinaturas', color: '#14b8a6', emoji: '📱' },
   outros: { label: 'Outros', color: '#6b7280', emoji: '📦' },
 }
 
