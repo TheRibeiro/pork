@@ -2,6 +2,8 @@ export type PaymentMethod = 'dinheiro' | 'debito' | 'credito' | 'pix'
 
 export type ExpenseType = 'fixo' | 'variavel'
 
+export type AccountType = 'adult' | 'parent' | 'child' | 'teen'
+
 export type Category =
   | 'alimentacao'
   | 'transporte'
@@ -26,6 +28,11 @@ export interface Expense {
   isRecurring: boolean
   billingMonth?: string // YYYY-MM format - mês da fatura (para cartão de crédito)
   source?: string
+  child_id?: string | null
+  // Campos de sinalização pelo responsável
+  parent_flagged?: boolean
+  parent_flag_note?: string | null
+  parent_flag_read?: boolean
 }
 
 export interface Envelope {
@@ -38,9 +45,21 @@ export interface CreditCardConfig {
   dueDay: number // dia de vencimento (1-31)
 }
 
+export interface ChildProfile {
+  id: string
+  name: string
+  pin: string
+  pin_expires_at?: number
+  is_connected?: boolean
+  allowance: number
+  avatarUrl?: string
+}
+
 export interface AppSettings {
   creditCard: CreditCardConfig
   envelopes: Envelope[]
+  children: ChildProfile[]
+  parentPin: string | null
   theme: 'light' | 'dark' | 'system'
 }
 
@@ -50,6 +69,17 @@ export interface MonthSummary {
   fixedTotal: number
   variableTotal: number
   dailySpending: { date: string; total: number }[]
+}
+
+export type PiggyState = 'full' | 'ok' | 'low' | 'critical' | 'wave'
+
+export function getPiggyState(spent: number, limit: number): PiggyState {
+  if (limit <= 0) return 'ok'
+  const pct = spent / limit
+  if (pct < 0.15) return 'full'    // Quase nada gasto → porquinho gordo e feliz
+  if (pct < 0.60) return 'ok'     // Tudo bem
+  if (pct < 0.85) return 'low'    // Apertando
+  return 'critical'               // Crítico
 }
 
 export const CATEGORY_CONFIG: Record<Category, { label: string; color: string; emoji: string }> = {

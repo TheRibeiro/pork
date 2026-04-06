@@ -1,3 +1,5 @@
+import type { AccountType } from './index'
+
 export interface Database {
   public: {
     Tables: {
@@ -15,7 +17,13 @@ export interface Database {
           telegram_chat_id: number | null
           is_telegram_verified: boolean
           envelopes: EnvelopeJson[]
+          children: ChildProfileJson[]
+          parent_pin: string | null
           theme: 'light' | 'dark' | 'system'
+          account_type: AccountType
+          parent_id: string | null
+          invite_token: string | null
+          onboarding_completed: boolean
           created_at: string
           updated_at: string
         }
@@ -32,7 +40,13 @@ export interface Database {
           telegram_chat_id?: number | null
           is_telegram_verified?: boolean
           envelopes?: EnvelopeJson[]
+          children?: ChildProfileJson[]
+          parent_pin?: string | null
           theme?: 'light' | 'dark' | 'system'
+          account_type?: AccountType
+          parent_id?: string | null
+          invite_token?: string | null
+          onboarding_completed?: boolean
         }
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>
       }
@@ -50,7 +64,11 @@ export interface Database {
           billing_month: string | null
           is_recurring: boolean
           tags: string[]
+          child_id: string | null
           source: 'pwa' | 'whatsapp' | 'telegram'
+          parent_flagged: boolean
+          parent_flag_note: string | null
+          parent_flag_read: boolean
           created_at: string
         }
         Insert: {
@@ -66,7 +84,11 @@ export interface Database {
           billing_month?: string | null
           is_recurring?: boolean
           tags?: string[]
+          child_id?: string | null
           source?: 'pwa' | 'whatsapp' | 'telegram'
+          parent_flagged?: boolean
+          parent_flag_note?: string | null
+          parent_flag_read?: boolean
         }
         Update: Partial<Database['public']['Tables']['transactions']['Insert']>
       }
@@ -121,6 +143,16 @@ export interface EnvelopeJson {
   limit: number
 }
 
+export interface ChildProfileJson {
+  id: string
+  name: string
+  pin: string
+  pin_expires_at?: number
+  is_connected?: boolean
+  allowance: number
+  avatarUrl?: string
+}
+
 // Tipo do profile para uso no app
 export interface UserProfile {
   id: string
@@ -133,7 +165,13 @@ export interface UserProfile {
   telegram_chat_id: number | null
   is_telegram_verified: boolean
   envelopes: EnvelopeJson[]
+  children: ChildProfileJson[]
+  parent_pin: string | null
   theme: 'light' | 'dark' | 'system'
+  account_type: AccountType
+  parent_id: string | null
+  invite_token: string | null
+  onboarding_completed: boolean
 }
 
 // Tipo da transaction para uso no app (mapeado do DB)
@@ -150,6 +188,10 @@ export interface TransactionRow {
   billing_month: string | null
   is_recurring: boolean
   tags: string[]
+  child_id: string | null
   source: 'pwa' | 'whatsapp' | 'telegram'
+  parent_flagged: boolean
+  parent_flag_note: string | null
+  parent_flag_read: boolean
   created_at: string
 }

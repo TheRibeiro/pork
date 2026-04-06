@@ -11,6 +11,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     dueDay: 5,
   },
   envelopes: [],
+  children: [],
+  parentPin: null,
   theme: 'system',
 }
 

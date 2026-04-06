@@ -10,7 +10,9 @@ import { useAuth } from './AuthContext'
 interface AppContextType {
   expenses: Expense[]
   settings: AppSettings
-  addExpense: (expense: Omit<Expense, 'id' | 'billingMonth'>) => Promise<void>
+  activeChildId: string | null
+  setActiveChildId: (id: string | null) => void
+  addExpense: (expense: Omit<Expense, 'id' | 'billingMonth' | 'child_id'>) => Promise<void>
   deleteExpense: (id: string) => Promise<void>
   editExpense: (id: string, expense: Partial<Expense>) => Promise<void>
   updateSettings: (settings: Partial<AppSettings>) => void
@@ -18,6 +20,7 @@ interface AppContextType {
   theme: 'light' | 'dark'
   toggleTheme: () => void
   loading: boolean
+  markFlagRead: (expenseId: string) => void
 }
 
 const AppContext = createContext<AppContextType | null>(null)
@@ -38,6 +41,10 @@ function rowToExpense(row: Record<string, unknown>): Expense {
     isRecurring: Boolean(row.is_recurring),
     billingMonth: row.billing_month ? String(row.billing_month) : undefined,
     source: row.source ? String(row.source) : undefined,
+    child_id: row.child_id ? String(row.child_id) : null,
+    parent_flagged: Boolean(row.parent_flagged),
+    parent_flag_note: row.parent_flag_note ? String(row.parent_flag_note) : null,
+    parent_flag_read: Boolean(row.parent_flag_read),
   }
 }
 
@@ -45,6 +52,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { user, profile, isOnline, updateProfile } = useAuth()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeChildId, setActiveChildId] = useState<string | null>(null)
+
+  const isParent = profile?.account_type === 'parent'
+  const isChildOrTeen = profile?.account_type === 'child' || profile?.account_type === 'teen'
 
   // Settings: vem do profile (online) ou localStorage (offline)
   const [settings, setSettings] = useState<AppSettings>(() => {
@@ -58,10 +69,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           category: e.category as Category,
           limit: e.limit,
         })),
+        children: profile.children || [],
+        parentPin: profile.parent_pin || null,
         theme: profile.theme,
       }
     }
-    return loadSettings()
+    const cached = loadSettings()
+    return { ...cached, children: cached.children || [], parentPin: cached.parentPin || null }
   })
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -84,23 +98,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
           category: e.category as Category,
           limit: e.limit,
         })),
+        children: profile.children || [],
+        parentPin: profile.parent_pin || null,
         theme: profile.theme,
       })
     }
   }, [profile])
 
   // Load expenses: from Supabase if online, localStorage if offline
+  // Parent também carrega transações dos filhos vinculados (via RLS policy)
   useEffect(() => {
     async function loadData() {
       setLoading(true)
       try {
         if (isOnline && user) {
-          const { data, error } = await supabase
+          let query = supabase
             .from('transactions')
             .select('*')
-            .eq('user_id', user.id)
             .order('date_transaction', { ascending: false })
             .order('created_at', { ascending: false })
+
+          if (isParent) {
+            // Pai vê as próprias + as dos filhos (RLS permite via parent_id)
+            // Sem filtro de user_id → RLS cuida do escopo
+          } else {
+            query = query.eq('user_id', user.id)
+          }
+
+          const { data, error } = await query
 
           if (!error && data) {
             setExpenses(data.map(rowToExpense))
@@ -117,11 +142,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
     loadData()
-  }, [isOnline, user])
+  }, [isOnline, user, isParent])
 
-  // Realtime subscription for new transactions (e.g., from WhatsApp bot)
+  // Realtime subscription for new/updated/deleted transactions
   useEffect(() => {
     if (!isOnline || !user) return
+
+    const filterClause = isParent
+      ? undefined  // Pai vê tudo que a RLS permitir
+      : `user_id=eq.${user.id}`
 
     const channel = supabase
       .channel('transactions-realtime')
@@ -131,7 +160,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           event: '*',
           schema: 'public',
           table: 'transactions',
-          filter: `user_id=eq.${user.id}`,
+          ...(filterClause ? { filter: filterClause } : {}),
         },
         (payload) => {
           try {
@@ -139,7 +168,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               const newExpense = rowToExpense(payload.new as Record<string, unknown>)
               setExpenses((prev) => {
                 if (prev.some((e) => e.id === newExpense.id)) return prev
-                vibrate([50, 100, 50]) // Vibra indicando gasto novo mágico via Bot!
+                if (newExpense.child_id === activeChildId) vibrate([50, 100, 50])
                 return [newExpense, ...prev]
               })
             } else if (payload.eventType === 'UPDATE') {
@@ -153,42 +182,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         }
       )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'transactions',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          try {
-            const deletedId = (payload.old as { id: string }).id
-            setExpenses((prev) => prev.filter((e) => e.id !== deletedId))
-          } catch (err) {
-            console.error('Erro ao processar delete realtime:', err)
-          }
-        }
-      )
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [isOnline, user])
+  }, [isOnline, user, activeChildId, isParent])
 
   // Persist expenses offline
   useEffect(() => {
-    if (!isOnline) {
-      saveExpenses(expenses)
-    }
+    if (!isOnline) saveExpenses(expenses)
   }, [expenses, isOnline])
 
   // Persist settings offline
   useEffect(() => {
-    if (!isOnline) {
-      saveSettings(settings)
-    }
+    if (!isOnline) saveSettings(settings)
   }, [settings, isOnline])
 
   // Apply theme class
@@ -210,11 +218,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [settings.theme])
 
   const addExpense = useCallback(
-    async (expense: Omit<Expense, 'id' | 'billingMonth'>) => {
+    async (expense: Omit<Expense, 'id' | 'billingMonth' | 'child_id'>) => {
       const billingMonth =
         expense.paymentMethod === 'credito'
-          ? calculateBillingMonth(expense.date, settings.creditCard)
-          : undefined
+           ? calculateBillingMonth(expense.date, settings.creditCard)
+           : undefined
 
       if (isOnline && user) {
         const { data, error } = await supabase
@@ -232,6 +240,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             is_recurring: expense.isRecurring,
             tags: expense.tags || [],
             source: 'pwa',
+            child_id: activeChildId || null
           })
           .select()
           .single()
@@ -244,11 +253,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ...expense,
           id: uuidv4(),
           billingMonth,
+          child_id: activeChildId || undefined
         }
         setExpenses((prev) => [newExpense, ...prev])
       }
     },
-    [settings.creditCard, isOnline, user]
+    [settings.creditCard, isOnline, user, activeChildId]
   )
 
   const deleteExpense = useCallback(
@@ -294,6 +304,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [settings.creditCard, isOnline, user]
   )
 
+  // Filho marca flag como lida (atualiza localmente também)
+  const markFlagRead = useCallback(
+    (expenseId: string) => {
+      setExpenses((prev) =>
+        prev.map(e => e.id === expenseId ? { ...e, parent_flag_read: true } : e)
+      )
+      if (isOnline && isChildOrTeen) {
+        supabase
+          .from('transactions')
+          .update({ parent_flag_read: true })
+          .eq('id', expenseId)
+          .then(() => {})
+      }
+    },
+    [isOnline, isChildOrTeen]
+  )
+
   const updateSettings = useCallback(
     (partial: Partial<AppSettings>) => {
       setSettings((prev) => {
@@ -315,6 +342,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
           if (partial.theme) {
             profileUpdates.theme = partial.theme
+          }
+          if (partial.children !== undefined) {
+            profileUpdates.children = partial.children
+          }
+          if (partial.parentPin !== undefined) {
+            profileUpdates.parent_pin = partial.parentPin
           }
           if (Object.keys(profileUpdates).length > 0) {
             updateProfile(profileUpdates)
@@ -371,6 +404,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       value={{
         expenses,
         settings,
+        activeChildId,
+        setActiveChildId,
         addExpense,
         deleteExpense,
         editExpense,
@@ -379,6 +414,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         theme,
         toggleTheme,
         loading,
+        markFlagRead,
       }}
     >
       {children}

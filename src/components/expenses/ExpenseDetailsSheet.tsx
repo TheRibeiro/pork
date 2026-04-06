@@ -4,6 +4,8 @@ import { X, Trash2, Check, Smartphone, Globe, Calendar, DollarSign, Tag, FileTex
 import { CATEGORY_CONFIG, PAYMENT_METHOD_LABELS } from '../../types'
 import type { Expense } from '../../types'
 import { ConfirmToast } from '../ui/ConfirmToast'
+import { useApp } from '../../contexts/AppContext'
+import { useAuth } from '../../contexts/AuthContext'
 
 interface ExpenseDetailsSheetProps {
   expense: Expense | null
@@ -19,14 +21,23 @@ export function ExpenseDetailsSheet({ expense, open, onClose, onDelete, onSave }
   const [date, setDate] = useState('')
   const [confirm, setConfirm] = useState<{ open: boolean; mode: 'save' | 'delete' }>({ open: false, mode: 'save' })
 
+  const { markFlagRead } = useApp()
+  const { profile } = useAuth()
+  const isChildOrTeen = profile?.account_type === 'child' || profile?.account_type === 'teen'
+
   useEffect(() => {
     if (expense && open) {
       setTitle(expense.title)
       setAmount(expense.amount.toString())
       setDate(expense.date)
       setConfirm({ open: false, mode: 'save' })
+
+      // Auto-marca flag como lida quando criança abre o gasto sinalizado
+      if (isChildOrTeen && expense.parent_flagged && !expense.parent_flag_read) {
+        markFlagRead(expense.id)
+      }
     }
-  }, [expense, open])
+  }, [expense, open, isChildOrTeen, markFlagRead])
 
   // Lock body scroll when open
   useEffect(() => {
@@ -118,6 +129,30 @@ export function ExpenseDetailsSheet({ expense, open, onClose, onDelete, onSave }
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto overscroll-contain">
             <div className="px-4 py-5 flex flex-col gap-5">
+
+              {/* ── BANNER: Flag do responsável (visível apenas para filhos) ── */}
+              {isChildOrTeen && expense.parent_flagged && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-start gap-3 p-4 rounded-2xl bg-amber-50 border-2 border-amber-200"
+                >
+                  <span className="text-2xl shrink-0 mt-0.5">🚩</span>
+                  <div className="flex-1">
+                    <p className="font-bold text-amber-800 text-sm">Seu responsável sinalizou este gasto</p>
+                    {expense.parent_flag_note && (
+                      <p className="text-amber-700 text-sm mt-1 font-medium">
+                        "{expense.parent_flag_note}"
+                      </p>
+                    )}
+                    {!expense.parent_flag_read && (
+                      <span className="inline-block mt-2 text-xs bg-amber-200 text-amber-800 font-bold px-2 py-0.5 rounded-full">
+                        Novo
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
+              )}
 
               {/* Category Hero */}
               <div

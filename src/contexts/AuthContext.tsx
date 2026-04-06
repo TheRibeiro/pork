@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef, ty
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import type { UserProfile } from '../types/supabase'
+import type { AccountType } from '../types'
 
 interface AuthContextType {
   user: User | null
@@ -14,6 +15,9 @@ interface AuthContextType {
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: string | null }>
   refreshProfile: () => Promise<void>
+  // Onboarding
+  needsOnboarding: boolean
+  completeOnboarding: (accountType: AccountType, inviteToken?: string) => Promise<{ error: string | null }>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -58,20 +62,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // Timeout de segurança: se getSession travar, desbloqueia em 4s
     const safetyTimeout = setTimeout(() => {
       console.warn('Auth timeout - forçando loading = false')
       resolveLoading()
     }, 4000)
 
-    // Listener de auth state - executa ANTES do getSession para pegar o evento INITIAL_SESSION
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         setSession(newSession)
         setUser(newSession?.user ?? null)
 
         if (newSession?.user) {
-          // Busca profile sem bloquear o loading
           fetchProfile(newSession.user.id).then((p) => {
             setProfile(p)
           })
@@ -79,14 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null)
         }
 
-        // Resolve loading no evento INITIAL_SESSION ou SIGNED_IN
         if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
           resolveLoading()
         }
       }
     )
 
-    // getSession como fallback (caso onAuthStateChange não dispare)
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       if (!loadingResolved.current) {
         setSession(s)
@@ -108,12 +107,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isOnline, fetchProfile])
 
   const signUp = useCallback(async (username: string, password: string, fullName: string) => {
-    const email = `${username.toLowerCase().trim()}@bolsocheio.app`
+    const raw = username.toLowerCase().trim()
+    const email = raw.includes('@') ? raw : `${raw}@bolsocheio.app`
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName, username: username.toLowerCase().trim() },
+        data: { full_name: fullName, username: raw },
       },
     })
     if (error?.message === 'User already registered') {
@@ -123,7 +123,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signIn = useCallback(async (username: string, password: string) => {
-    const email = `${username.toLowerCase().trim()}@bolsocheio.app`
+    const raw = username.toLowerCase().trim()
+    const email = raw.includes('@') ? raw : `${raw}@bolsocheio.app`
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error?.message === 'Invalid login credentials') {
       return { error: 'Usuário ou senha incorretos' }
@@ -159,6 +160,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(p)
   }, [user, fetchProfile])
 
+  // Determina se o onboarding é necessário
+  // Contas novas (sem account_type definido ou onboarding_completed = false)
+  const needsOnboarding = Boolean(
+    user &&
+    isOnline &&
+    profile &&
+    !profile.onboarding_completed
+  )
+
+  // Completa o onboarding: define account_type e opcionalmente vincula ao responsável
+  const completeOnboarding = useCallback(async (
+    accountType: AccountType,
+    inviteToken?: string
+  ): Promise<{ error: string | null }> => {
+    if (!user) return { error: 'Usuário não autenticado' }
+
+    // Se for filho/teen e forneceu token → vincula via RPC
+    if ((accountType === 'child' || accountType === 'teen') && inviteToken) {
+      const { data, error } = await supabase.rpc('link_child_to_parent', {
+        p_invite_token: inviteToken.trim().toUpperCase(),
+      })
+
+      if (error) return { error: error.message }
+
+      const result = data as { success: boolean; error?: string }
+      if (!result.success) return { error: result.error ?? 'Erro ao vincular conta' }
+
+      // Atualiza account_type local
+      await supabase
+        .from('profiles')
+        .update({ account_type: accountType, onboarding_completed: true })
+        .eq('id', user.id)
+
+      await refreshProfile()
+      return { error: null }
+    }
+
+    // Responsável ou adulto: apenas marca onboarding como completo
+    const updates: Partial<UserProfile> = {
+      account_type: accountType,
+      onboarding_completed: true,
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', user.id)
+
+    if (!error) {
+      setProfile((prev) => prev ? { ...prev, ...updates } : null)
+    }
+
+    return { error: error?.message ?? null }
+  }, [user, refreshProfile])
+
   return (
     <AuthContext.Provider
       value={{
@@ -172,6 +228,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         updateProfile,
         refreshProfile,
+        needsOnboarding,
+        completeOnboarding,
       }}
     >
       {children}
