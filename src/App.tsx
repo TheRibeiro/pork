@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { AppProvider } from './contexts/AppContext'
+import { AppProvider, useApp } from './contexts/AppContext'
 import { FamilyProvider } from './contexts/FamilyContext'
 import { vibrate } from './lib/utils'
 import { Dashboard } from './pages/Dashboard'
@@ -11,6 +11,7 @@ import { Settings } from './pages/Settings'
 import { ExpenseForm } from './components/expense/ExpenseForm'
 import { AuthScreen } from './components/auth/AuthScreen'
 import { Onboarding } from './components/family/Onboarding'
+import { hideSplash, setupAppListeners, setStatusBarLight, setStatusBarDark } from './lib/native'
 
 type Tab = 'home' | 'history' | 'add' | 'insights' | 'settings'
 
@@ -29,6 +30,23 @@ const pageTransition = {
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>('home')
+  const { theme } = useApp()
+
+  // Setup native features
+  useEffect(() => {
+    // Esconde splash screen após o app carregar
+    hideSplash()
+
+    // Configura listeners nativos (back button, etc)
+    setupAppListeners()
+
+    // Atualiza status bar baseado no tema
+    if (theme === 'dark') {
+      setStatusBarDark()
+    } else {
+      setStatusBarLight()
+    }
+  }, [theme])
 
   const tabs: { id: Tab; icon: string; label: string }[] = [
     { id: 'home', icon: 'home', label: 'Início' },

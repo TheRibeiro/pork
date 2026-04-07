@@ -289,8 +289,29 @@ export function getEnvelopeColor(spent: number, limit: number): string {
 
 /**
  * Dispara um haptic feedback seguro no dispositivo
+ * Usa Capacitor Haptics quando disponível (melhor feedback em iOS/Android)
  */
-export function vibrate(pattern: number | number[] = 50) {
+export async function vibrate(pattern: number | number[] = 50) {
+  try {
+    // Tenta usar Capacitor Haptics primeiro (melhor em app nativo)
+    const { Capacitor } = await import('@capacitor/core')
+    if (Capacitor.isNativePlatform()) {
+      const { Haptics, ImpactStyle } = await import('@capacitor/haptics')
+      const intensity = typeof pattern === 'number' ? pattern : pattern[0] || 50
+      if (intensity <= 15) {
+        await Haptics.impact({ style: ImpactStyle.Light })
+      } else if (intensity <= 30) {
+        await Haptics.impact({ style: ImpactStyle.Medium })
+      } else {
+        await Haptics.impact({ style: ImpactStyle.Heavy })
+      }
+      return
+    }
+  } catch {
+    // Fallback para web
+  }
+
+  // Fallback: Web Vibration API
   if (typeof navigator !== 'undefined' && navigator.vibrate) {
     navigator.vibrate(pattern)
   }

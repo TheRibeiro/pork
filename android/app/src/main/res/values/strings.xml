@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">BolsoCheio</string>
+    <string name="title_activity_main">BolsoCheio</string>
+    <string name="package_name">com.bolsocheio.app</string>
+    <string name="custom_url_scheme">com.bolsocheio.app</string>
+</resources>
