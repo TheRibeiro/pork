@@ -1,11 +1,14 @@
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useApp } from '../contexts/AppContext'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { CATEGORY_CONFIG, PAYMENT_METHOD_LABELS } from '../types'
 
 export function History() {
-  const { expenses } = useApp()
+  const { expenses, deleteExpense } = useApp()
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -29,164 +32,220 @@ export function History() {
     return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear()
   })
 
+  const totalMonth = filtered.reduce((sum, e) => sum + e.amount, 0)
+
   // Group by day
   const grouped = filtered.reduce<Record<string, typeof expenses>>((acc, exp) => {
-    const key = format(new Date(exp.date), 'dd/MM/yyyy', { locale: ptBR })
+    const key = exp.date
     if (!acc[key]) acc[key] = []
     acc[key].push(exp)
     return acc
   }, {})
 
-  const sortedDays = Object.keys(grouped).sort((a, b) => {
-    const [da, ma, ya] = a.split('/').map(Number)
-    const [db, mb, yb] = b.split('/').map(Number)
-    return new Date(yb, mb - 1, db).getTime() - new Date(ya, ma - 1, da).getTime()
-  })
+  const sortedDays = Object.keys(grouped).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
 
-  // Style rotation based on index to recreate the "scrapbook" sticker effect
-  const getRotation = (idx: number) => {
-    if (idx % 3 === 0) return 'rotate-1'
-    if (idx % 3 === 1) return '-rotate-1'
-    return 'rotate-2'
-  }
-
-  const getDayInfo = (dateStr: string) => {
-    const [d, m, y] = dateStr.split('/')
-    const date = new Date(Number(y), Number(m) - 1, Number(d))
+  const getDayLabel = (dateStr: string) => {
+    const date = new Date(dateStr)
     const today = new Date()
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
-    
-    if (date.toDateString() === today.toDateString()) {
-      return { label: 'Hoje! ✨', badge: 'bg-tertiary-container text-on-tertiary-container', rot: '-rotate-6' }
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return { label: 'Ontem 🕰️', badge: 'bg-primary-container text-on-primary-container', rot: 'rotate-2' }
-    }
-    return { label: format(date, "dd MMM", { locale: ptBR }), badge: 'bg-secondary-container text-on-secondary-container', rot: 'rotate-1' }
+
+    if (date.toDateString() === today.toDateString()) return 'Hoje'
+    if (date.toDateString() === yesterday.toDateString()) return 'Ontem'
+    return format(date, "EEEE, dd 'de' MMMM", { locale: ptBR })
   }
 
-  const getIconData = (e: typeof expenses[0]) => {
-    switch (e.category) {
-      case 'alimentacao': return { icon: 'restaurant', iconAlt: 'icecream', bg: 'bg-secondary-fixed', text: 'text-on-secondary-fixed' }
-      case 'lazer': return { icon: 'movie', iconAlt: 'sports_esports', bg: 'bg-tertiary-container', text: 'text-on-tertiary-container' }
-      case 'transporte': return { icon: 'local_taxi', iconAlt: 'directions_bus', bg: 'bg-primary-container', text: 'text-on-primary-container' }
-      default: return { icon: 'shopping_bag', iconAlt: 'store', bg: 'bg-surface-container-highest', text: 'text-primary' }
+  const handleDelete = (id: string) => {
+    if (confirm('Deseja excluir este gasto?')) {
+      deleteExpense(id)
+      setExpandedId(null)
     }
   }
 
   return (
-    <div className="min-h-screen pb-32 bg-pattern font-body text-on-surface">
-      {/* TopAppBar */}
-      <header className="w-full top-0 sticky z-50 bg-[#fff4f6]/95 backdrop-blur-md shadow-[0_20px_40px_rgba(119,81,89,0.08)] flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-3">
-          <span className="material-symbols-outlined text-[#775159] text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>savings</span>
-          <h1 className="font-headline font-bold text-2xl tracking-tight text-[#775159]">BolsoCheio</h1>
-        </div>
-        <div className="flex gap-4">
-          <button className="hover:scale-105 transition-transform duration-200 active:scale-95 text-[#775159]">
-            <span className="material-symbols-outlined text-2xl">search</span>
-          </button>
+    <div className="min-h-screen pb-32 bg-[#fff4f6] dark:bg-slate-950 font-body">
+      {/* Header */}
+      <header className="w-full top-0 sticky z-50 bg-[#fff4f6]/95 dark:bg-slate-950/95 backdrop-blur-md shadow-sm">
+        <div className="flex items-center justify-between px-6 py-4 max-w-2xl mx-auto">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[#775159] dark:text-pink-300 text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+              history
+            </span>
+            <h1 className="font-headline font-bold text-2xl tracking-tight text-[#775159] dark:text-pink-300">
+              Histórico
+            </h1>
+          </div>
         </div>
       </header>
 
-      <main className="px-6 pt-10 max-w-2xl mx-auto">
-        {/* Title Section */}
-        <div className="mb-12 flex flex-col items-center text-center">
-          <div className="bg-secondary-container text-on-secondary-container px-6 py-2 rounded-full font-headline font-bold text-sm tracking-widest uppercase mb-4 shadow-sm">
-            Log de Aventuras
-          </div>
-          <h2 className="font-headline font-extrabold text-4xl text-primary tracking-tight">Onde o dinheiro viajou?</h2>
-        </div>
-
-        {/* Chunky Navigation */}
-        <div className="flex justify-between items-center mb-10 px-4">
-          <button 
+      <main className="max-w-2xl mx-auto px-6 pt-6 space-y-6">
+        {/* Month Navigation */}
+        <div className="flex items-center justify-between bg-white dark:bg-slate-900 rounded-2xl p-4 border border-pink-100 dark:border-slate-800">
+          <button
             onClick={prevMonth}
-            className="bg-surface-container-lowest p-5 rounded-xl shadow-[0_8px_0_rgba(119,81,89,0.1)] active:translate-y-1 active:shadow-none transition-all text-primary"
+            className="w-12 h-12 flex items-center justify-center rounded-xl bg-pink-50 dark:bg-slate-800 text-[#775159] dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-slate-700 transition-colors"
           >
-            <span className="material-symbols-outlined text-3xl font-bold">arrow_back_ios_new</span>
+            <span className="material-symbols-outlined">chevron_left</span>
           </button>
+
           <div className="text-center">
-            <p className="font-headline font-bold text-lg text-on-surface">{monthLabelCap}</p>
-            <p className="text-on-surface-variant text-sm font-medium">{filtered.length} missões concluídas</p>
+            <p className="font-headline font-bold text-lg text-[#775159] dark:text-pink-200">
+              {monthLabelCap}
+            </p>
+            <p className="text-sm text-[#775159]/60 dark:text-pink-300/60">
+              {filtered.length} gastos · {fmt(totalMonth)}
+            </p>
           </div>
-          <button 
+
+          <button
             onClick={nextMonth}
-            className="bg-surface-container-lowest p-5 rounded-xl shadow-[0_8px_0_rgba(119,81,89,0.1)] active:translate-y-1 active:shadow-none transition-all text-primary"
+            className="w-12 h-12 flex items-center justify-center rounded-xl bg-pink-50 dark:bg-slate-800 text-[#775159] dark:text-pink-300 hover:bg-pink-100 dark:hover:bg-slate-700 transition-colors"
           >
-            <span className="material-symbols-outlined text-3xl font-bold">arrow_forward_ios</span>
+            <span className="material-symbols-outlined">chevron_right</span>
           </button>
         </div>
 
-        {/* Scrapbook Sections */}
-        <div className="space-y-16">
+        {/* Expenses List */}
+        <div className="space-y-6">
           {sortedDays.length === 0 ? (
-            <div className="mt-20 flex flex-col items-center text-center opacity-70">
-              <span className="text-5xl mb-4">🌪️</span>
-              <p className="text-lg font-bold text-primary">Nenhuma aventura aqui</p>
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white dark:bg-slate-900 rounded-2xl p-12 text-center border border-pink-100 dark:border-slate-800"
+            >
+              <span className="text-5xl mb-4 block">🐷</span>
+              <p className="font-bold text-[#775159] dark:text-pink-200 text-lg">
+                Nenhum gasto neste mês
+              </p>
+              <p className="text-sm text-[#775159]/60 dark:text-pink-300/60 mt-1">
+                O porquinho está feliz!
+              </p>
+            </motion.div>
           ) : (
             sortedDays.map((dayStr, dayIdx) => {
               const dayExpenses = grouped[dayStr]
-              const dayInfo = getDayInfo(dayStr)
+              const dayTotal = dayExpenses.reduce((sum, e) => sum + e.amount, 0)
+              const dayLabel = getDayLabel(dayStr)
+              const isToday = dayLabel === 'Hoje'
 
               return (
-                <section key={dayStr} className="relative mt-8">
-                  {/* Title Badge Sticker */}
-                  <div className={`absolute -left-4 -top-6 ${dayInfo.rot} ${dayInfo.badge} px-6 py-3 rounded-lg font-headline font-black text-xl shadow-lg z-10`}>
-                    {dayInfo.label}
+                <motion.section
+                  key={dayStr}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: dayIdx * 0.05 }}
+                  className="space-y-3"
+                >
+                  {/* Day Header */}
+                  <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center gap-2">
+                      {isToday && (
+                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      )}
+                      <h3 className={`font-bold text-sm capitalize ${
+                        isToday ? 'text-green-600 dark:text-green-400' : 'text-[#775159]/70 dark:text-pink-300/70'
+                      }`}>
+                        {dayLabel}
+                      </h3>
+                    </div>
+                    <span className="text-sm font-bold text-[#775159]/50 dark:text-pink-300/50">
+                      {fmt(dayTotal)}
+                    </span>
                   </div>
-                  
-                  <div className="grid gap-8 pt-8">
+
+                  {/* Expenses */}
+                  <div className="space-y-2">
                     {dayExpenses.map((exp, idx) => {
-                      const rotation = getRotation(idx + dayIdx)
-                      const ui = getIconData(exp)
-                      
+                      const config = CATEGORY_CONFIG[exp.category]
+                      const isExpanded = expandedId === exp.id
+
                       return (
-                        <div 
-                          key={exp.id} 
-                          className={`bg-surface-container-lowest p-6 rounded-xl shadow-[0_15px_30px_rgba(119,81,89,0.06)] border-4 border-white ${rotation} hover:rotate-0 transition-transform cursor-pointer relative overflow-hidden group`}
+                        <motion.div
+                          key={exp.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: (dayIdx * 0.05) + (idx * 0.03) }}
+                          className="bg-white dark:bg-slate-900 rounded-2xl border border-pink-50 dark:border-slate-800 overflow-hidden"
                         >
-                          {/* Ghost background icon */}
-                          <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-110 transition-transform">
-                            <span className="material-symbols-outlined text-8xl">{ui.iconAlt}</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-4 sm:gap-6 z-10 relative">
-                            <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full ${ui.bg} flex items-center justify-center border-4 border-dashed border-white/40 shrink-0`}>
-                              <span className={`material-symbols-outlined ${ui.text} text-3xl`} style={{ fontVariationSettings: "'FILL' 1" }}>
-                                {ui.icon}
-                              </span>
+                          <button
+                            onClick={() => setExpandedId(isExpanded ? null : exp.id)}
+                            className="w-full p-4 flex items-center gap-4 text-left"
+                          >
+                            <div
+                              className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0"
+                              style={{ backgroundColor: `${config.color}20` }}
+                            >
+                              {config.emoji}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-headline font-bold text-lg sm:text-xl text-on-surface truncate">{exp.description || exp.category}</h4>
-                              <p className="text-on-surface-variant font-medium text-xs sm:text-sm capitalize">{exp.category}</p>
+                              <p className="font-bold text-[#775159] dark:text-pink-200 truncate">
+                                {exp.description || config.label}
+                              </p>
+                              <p className="text-xs text-[#775159]/50 dark:text-pink-300/50">
+                                {config.label} · {PAYMENT_METHOD_LABELS[exp.paymentMethod]}
+                              </p>
                             </div>
                             <div className="text-right shrink-0">
-                              <p className="font-headline font-black text-lg sm:text-2xl text-error">- {fmt(exp.amount)}</p>
+                              <p className="font-bold text-red-500 dark:text-red-400">
+                                -{fmt(exp.amount)}
+                              </p>
                             </div>
-                          </div>
-                        </div>
+                            <span className={`material-symbols-outlined text-[#775159]/30 dark:text-pink-300/30 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                              expand_more
+                            </span>
+                          </button>
+
+                          <AnimatePresence>
+                            {isExpanded && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="px-4 pb-4 pt-2 border-t border-pink-50 dark:border-slate-800 space-y-3">
+                                  <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                      <p className="text-[#775159]/50 dark:text-pink-300/50 text-xs">Data</p>
+                                      <p className="font-medium text-[#775159] dark:text-pink-200">
+                                        {format(new Date(exp.date), "dd/MM/yyyy")}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-[#775159]/50 dark:text-pink-300/50 text-xs">Tipo</p>
+                                      <p className="font-medium text-[#775159] dark:text-pink-200">
+                                        {exp.type === 'fixo' ? 'Despesa Fixa' : 'Gasto Único'}
+                                      </p>
+                                    </div>
+                                    {exp.billingMonth && (
+                                      <div className="col-span-2">
+                                        <p className="text-[#775159]/50 dark:text-pink-300/50 text-xs">Fatura</p>
+                                        <p className="font-medium text-[#775159] dark:text-pink-200">
+                                          {format(new Date(exp.billingMonth + '-01'), "MMMM/yyyy", { locale: ptBR })}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <button
+                                    onClick={() => handleDelete(exp.id)}
+                                    className="w-full py-2 text-red-500 dark:text-red-400 text-sm font-bold flex items-center justify-center gap-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+                                  >
+                                    <span className="material-symbols-outlined text-lg">delete</span>
+                                    Excluir
+                                  </button>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
                       )
                     })}
                   </div>
-                </section>
+                </motion.section>
               )
             })
           )}
         </div>
-
-        {/* Fun Sticker Decoration */}
-        {sortedDays.length > 0 && (
-          <div className="my-20 flex justify-center pb-20">
-            <div className="relative w-48 h-48 rounded-full border-8 border-dashed border-primary/20 flex items-center justify-center">
-              <span className="text-8xl animate-pulse">🐷</span>
-              <div className="absolute -right-4 top-0 bg-secondary px-4 py-2 rounded-full text-white font-black text-sm rotate-12 shadow-lg">
-                POUPADOR!
-              </div>
-            </div>
-          </div>
-        )}
       </main>
     </div>
   )

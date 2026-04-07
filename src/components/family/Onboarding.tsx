@@ -3,78 +3,21 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../contexts/AuthContext'
 import { useFamily } from '../../contexts/FamilyContext'
 import { PiggyCharacter } from './PiggyCharacter'
-import { vibrate } from '../../lib/utils'
-import type { AccountType } from '../../types'
 
-type Step = 'welcome' | 'choose' | 'parent-done' | 'child-token'
+type Step = 'welcome' | 'choose' | 'adult-done' | 'supervised-token'
 
 export function Onboarding() {
   const { completeOnboarding, profile } = useAuth()
   const { generateToken, inviteToken } = useFamily()
 
   const [step, setStep] = useState<Step>('welcome')
-  const [chosenType, setChosenType] = useState<AccountType | null>(null)
   const [tokenInput, setTokenInput] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [generatedToken, setGeneratedToken] = useState<string | null>(inviteToken)
+  const [wantsToSupervise, setWantsToSupervise] = useState(false)
 
   const firstName = profile?.full_name?.split(' ')[0] || profile?.email?.split('@')[0] || 'Olá'
-
-  // Step 1 → Step 2
-  function handleStart() {
-    vibrate(20)
-    setStep('choose')
-  }
-
-  // Step 2 → choose parent or child
-  async function handleChooseParent() {
-    vibrate(20)
-    setChosenType('parent')
-    setLoading(true)
-    setError(null)
-    try {
-      // Complete onboarding as parent first, then generate token
-      const { error: err } = await completeOnboarding('parent')
-      if (err) { setError(err); return }
-      const token = await generateToken()
-      setGeneratedToken(token)
-      setStep('parent-done')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  function handleChooseChild(type: 'child' | 'teen') {
-    vibrate(20)
-    setChosenType(type)
-    setStep('child-token')
-  }
-
-  // Child submits invite token
-  async function handleLinkChild() {
-    if (!tokenInput.trim() || !chosenType) return
-    vibrate(20)
-    setLoading(true)
-    setError(null)
-    try {
-      const { error: err } = await completeOnboarding(chosenType, tokenInput.trim())
-      if (err) {
-        setError(err)
-        vibrate([50, 50, 50])
-      }
-      // If success, AuthContext will update profile.onboarding_completed → App gate handles redirect
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Parent skips invite for now
-  async function handleParentSkip() {
-    // Already completed in handleChooseParent; just close onboarding
-    // profile.onboarding_completed should already be true
-    window.location.reload()
-  }
 
   const slideVariants = {
     initial: { opacity: 0, x: 40 },
@@ -83,16 +26,52 @@ export function Onboarding() {
   }
   const transition = { type: 'spring' as const, stiffness: 350, damping: 28 }
 
+  async function handleChooseAdult() {
+    setLoading(true)
+    setError(null)
+    try {
+      // Complete as adult
+      const { error: err } = await completeOnboarding('adult')
+      if (err) { setError(err); return }
+
+      // If user wants to supervise, generate token
+      if (wantsToSupervise) {
+        const token = await generateToken()
+        setGeneratedToken(token)
+        setStep('adult-done')
+      } else {
+        window.location.reload()
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleLinkToParent() {
+    if (!tokenInput.trim()) return
+    setLoading(true)
+    setError(null)
+    try {
+      const { error: err } = await completeOnboarding('supervised', tokenInput.trim())
+      if (err) {
+        setError(err)
+      }
+      // If success, App gate will redirect
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <div className="min-h-dvh flex flex-col bg-gradient-to-b from-[#fff0f5] to-[#fff8fc] relative overflow-hidden">
-      {/* Blobs decorativos */}
-      <div className="absolute top-[-10%] right-[-10%] w-72 h-72 bg-pink-200/30 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-[-5%] left-[-5%] w-56 h-56 bg-purple-100/40 rounded-full blur-2xl pointer-events-none" />
+    <div className="min-h-dvh flex flex-col bg-gradient-to-b from-[#fff0f5] to-[#fff8fc] dark:from-slate-900 dark:to-slate-800 relative overflow-hidden">
+      {/* Decorative blobs */}
+      <div className="absolute top-[-10%] right-[-10%] w-72 h-72 bg-pink-200/30 dark:bg-pink-900/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-[-5%] left-[-5%] w-56 h-56 bg-purple-100/40 dark:bg-purple-900/20 rounded-full blur-2xl pointer-events-none" />
 
       <main className="flex-1 flex flex-col items-center justify-center px-6 z-10">
         <AnimatePresence mode="wait">
 
-          {/* ── STEP 1: BOAS-VINDAS ── */}
+          {/* STEP 1: Welcome */}
           {step === 'welcome' && (
             <motion.div
               key="welcome"
@@ -106,38 +85,38 @@ export function Onboarding() {
               <PiggyCharacter state="wave" size={140} showMessage={false} />
 
               <div className="space-y-2">
-                <h1 className="font-headline font-extrabold text-4xl text-[#775159] tracking-tight">
+                <h1 className="font-headline font-extrabold text-4xl text-[#775159] dark:text-pink-200 tracking-tight">
                   Oi, {firstName}!
                 </h1>
-                <p className="text-[#775159]/70 font-medium text-base leading-relaxed">
-                  Bem-vindo ao <span className="font-bold text-[#775159]">BolsoCheio</span> —<br />
-                  onde o dinheiro encontra a família!
+                <p className="text-[#775159]/70 dark:text-pink-200/70 font-medium text-base leading-relaxed">
+                  Bem-vindo ao <span className="font-bold text-[#775159] dark:text-pink-200">BolsoCheio</span><br />
+                  Seu app de finanças pessoais
                 </p>
               </div>
 
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-5 shadow-sm border border-pink-100 text-left space-y-3 w-full">
+              <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl p-5 shadow-sm border border-pink-100 dark:border-slate-700 text-left space-y-3 w-full">
                 {[
-                  { icon: '🐷', text: 'Porquinho animado que reflete seu bolso' },
-                  { icon: '👨‍👩‍👧', text: 'Conta familiar espelhada pai ↔ filho' },
-                  { icon: '🚩', text: 'Responsável pode sinalizar gastos e orientar' },
+                  { icon: '💰', text: 'Controle seus gastos de forma simples' },
+                  { icon: '📊', text: 'Veja insights sobre suas finanças' },
+                  { icon: '🎯', text: 'Defina metas e limites por categoria' },
                 ].map(({ icon, text }) => (
                   <div key={text} className="flex items-center gap-3">
                     <span className="text-2xl">{icon}</span>
-                    <span className="text-sm font-medium text-[#775159]/80">{text}</span>
+                    <span className="text-sm font-medium text-[#775159]/80 dark:text-pink-200/80">{text}</span>
                   </div>
                 ))}
               </div>
 
               <button
-                onClick={handleStart}
-                className="w-full py-5 rounded-full bg-[#775159] text-white font-headline font-extrabold text-lg shadow-[0_8px_0_#502e36] active:shadow-none active:translate-y-2 transition-all"
+                onClick={() => setStep('choose')}
+                className="w-full py-5 rounded-full bg-[#775159] dark:bg-pink-600 text-white font-headline font-extrabold text-lg shadow-[0_8px_0_#502e36] dark:shadow-[0_8px_0_#9f1239] active:shadow-none active:translate-y-2 transition-all"
               >
-                Vamos Começar! 🐷
+                Começar
               </button>
             </motion.div>
           )}
 
-          {/* ── STEP 2: ESCOLHER PERFIL ── */}
+          {/* STEP 2: Choose type */}
           {step === 'choose' && (
             <motion.div
               key="choose"
@@ -146,59 +125,67 @@ export function Onboarding() {
               animate="animate"
               exit="exit"
               transition={transition}
-              className="w-full max-w-sm flex flex-col items-center gap-8 text-center"
+              className="w-full max-w-sm flex flex-col items-center gap-6 text-center"
             >
               <div className="space-y-2">
-                <h2 className="font-headline font-extrabold text-3xl text-[#775159]">Você é...</h2>
-                <p className="text-[#775159]/60 text-sm font-medium">Escolha o tipo de conta</p>
+                <h2 className="font-headline font-extrabold text-3xl text-[#775159] dark:text-pink-200">
+                  Como quer usar?
+                </h2>
+                <p className="text-[#775159]/60 dark:text-pink-200/60 text-sm font-medium">
+                  Escolha o que melhor se encaixa
+                </p>
               </div>
 
-              {/* Opção: Responsável */}
+              {/* Option 1: Personal use */}
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={handleChooseParent}
+                onClick={() => { setWantsToSupervise(false); handleChooseAdult() }}
                 disabled={loading}
-                className="w-full bg-white p-6 rounded-3xl shadow-md border-2 border-pink-100 flex items-center gap-5 text-left hover:border-[#775159]/30 transition-all disabled:opacity-60"
+                className="w-full bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-md border-2 border-pink-100 dark:border-slate-700 flex items-center gap-5 text-left hover:border-[#775159]/30 transition-all disabled:opacity-60"
               >
-                <div className="w-16 h-16 rounded-2xl bg-[#fff0f5] flex items-center justify-center text-3xl border-2 border-pink-100 shadow-sm shrink-0">
-                  👨‍👩‍👧
+                <div className="w-16 h-16 rounded-2xl bg-[#fff0f5] dark:bg-slate-700 flex items-center justify-center text-3xl border-2 border-pink-100 dark:border-slate-600 shrink-0">
+                  💰
                 </div>
-                <div>
-                  <h3 className="font-headline font-black text-xl text-[#775159]">Sou Responsável</h3>
-                  <p className="text-sm text-[#775159]/60 mt-0.5">Pai, mãe ou guardião da família</p>
+                <div className="flex-1">
+                  <h3 className="font-headline font-black text-xl text-[#775159] dark:text-pink-200">Uso Pessoal</h3>
+                  <p className="text-sm text-[#775159]/60 dark:text-pink-200/60 mt-0.5">Controlar minhas próprias finanças</p>
                 </div>
-                {loading && chosenType === 'parent' && (
-                  <span className="material-symbols-outlined animate-spin text-[#775159] ml-auto">sync</span>
+                {loading && !wantsToSupervise && (
+                  <span className="material-symbols-outlined animate-spin text-[#775159] dark:text-pink-200">sync</span>
                 )}
               </motion.button>
 
-              {/* Opção: Criança */}
+              {/* Option 2: Supervise others */}
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => handleChooseChild('child')}
-                className="w-full bg-[#fef9ee] p-6 rounded-3xl shadow-md border-2 border-amber-100 flex items-center gap-5 text-left hover:border-amber-300 transition-all"
+                onClick={() => { setWantsToSupervise(true); handleChooseAdult() }}
+                disabled={loading}
+                className="w-full bg-[#fff9ee] dark:bg-amber-900/30 p-6 rounded-3xl shadow-md border-2 border-amber-100 dark:border-amber-800 flex items-center gap-5 text-left hover:border-amber-300 transition-all disabled:opacity-60"
               >
-                <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center text-3xl border-2 border-amber-100 shadow-sm shrink-0">
-                  🧒
+                <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-900/50 flex items-center justify-center text-3xl border-2 border-amber-100 dark:border-amber-700 shrink-0">
+                  👨‍👩‍👧
                 </div>
-                <div>
-                  <h3 className="font-headline font-black text-xl text-amber-800">Sou Criança</h3>
-                  <p className="text-sm text-amber-700/70 mt-0.5">Tenho código do meu responsável</p>
+                <div className="flex-1">
+                  <h3 className="font-headline font-black text-xl text-amber-800 dark:text-amber-200">Supervisionar</h3>
+                  <p className="text-sm text-amber-700/70 dark:text-amber-300/70 mt-0.5">Acompanhar gastos de familiares</p>
                 </div>
+                {loading && wantsToSupervise && (
+                  <span className="material-symbols-outlined animate-spin text-amber-800">sync</span>
+                )}
               </motion.button>
 
-              {/* Opção: Teen */}
+              {/* Option 3: Be supervised */}
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => handleChooseChild('teen')}
-                className="w-full bg-[#f5f0ff] p-6 rounded-3xl shadow-md border-2 border-purple-100 flex items-center gap-5 text-left hover:border-purple-300 transition-all"
+                onClick={() => setStep('supervised-token')}
+                className="w-full bg-[#f0f5ff] dark:bg-blue-900/30 p-6 rounded-3xl shadow-md border-2 border-blue-100 dark:border-blue-800 flex items-center gap-5 text-left hover:border-blue-300 transition-all"
               >
-                <div className="w-16 h-16 rounded-2xl bg-purple-50 flex items-center justify-center text-3xl border-2 border-purple-100 shadow-sm shrink-0">
-                  🧑
+                <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/50 flex items-center justify-center text-3xl border-2 border-blue-100 dark:border-blue-700 shrink-0">
+                  🔗
                 </div>
                 <div>
-                  <h3 className="font-headline font-black text-xl text-purple-800">Sou Teen</h3>
-                  <p className="text-sm text-purple-700/70 mt-0.5">11-17 anos, mais autonomia</p>
+                  <h3 className="font-headline font-black text-xl text-blue-800 dark:text-blue-200">Vincular Conta</h3>
+                  <p className="text-sm text-blue-700/70 dark:text-blue-300/70 mt-0.5">Tenho código de um responsável</p>
                 </div>
               </motion.button>
 
@@ -208,10 +195,10 @@ export function Onboarding() {
             </motion.div>
           )}
 
-          {/* ── STEP 3A: RESPONSÁVEL CONCLUI ── */}
-          {step === 'parent-done' && (
+          {/* STEP 3A: Adult done with supervision */}
+          {step === 'adult-done' && (
             <motion.div
-              key="parent-done"
+              key="adult-done"
               variants={slideVariants}
               initial="initial"
               animate="animate"
@@ -222,55 +209,54 @@ export function Onboarding() {
               <PiggyCharacter state="full" size={110} showMessage={false} />
 
               <div className="space-y-2">
-                <h2 className="font-headline font-extrabold text-3xl text-[#775159]">Tudo pronto! 🎉</h2>
-                <p className="text-[#775159]/70 text-sm font-medium">
-                  Compartilhe o código abaixo com seu filho para vincularem as contas.
+                <h2 className="font-headline font-extrabold text-3xl text-[#775159] dark:text-pink-200">Tudo pronto!</h2>
+                <p className="text-[#775159]/70 dark:text-pink-200/70 text-sm font-medium">
+                  Compartilhe o código abaixo para vincular contas
                 </p>
               </div>
 
               {generatedToken ? (
-                <div className="w-full bg-white rounded-2xl p-6 shadow-sm border-2 border-dashed border-pink-200 space-y-3">
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#775159]/50">Código de Convite</p>
-                  <div className="font-headline font-black text-4xl text-[#775159] tracking-[0.2em]">
+                <div className="w-full bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border-2 border-dashed border-pink-200 dark:border-pink-800 space-y-3">
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#775159]/50 dark:text-pink-200/50">
+                    Código de Convite
+                  </p>
+                  <div className="font-headline font-black text-4xl text-[#775159] dark:text-pink-200 tracking-[0.2em]">
                     {generatedToken}
                   </div>
                   <button
-                    onClick={() => {
-                      navigator.clipboard?.writeText(generatedToken)
-                      vibrate(20)
-                    }}
-                    className="flex items-center gap-2 mx-auto text-xs font-bold text-[#775159]/60 hover:text-[#775159] transition-colors"
+                    onClick={() => navigator.clipboard?.writeText(generatedToken)}
+                    className="flex items-center gap-2 mx-auto text-xs font-bold text-[#775159]/60 dark:text-pink-200/60 hover:text-[#775159] dark:hover:text-pink-200 transition-colors"
                   >
                     <span className="material-symbols-outlined text-sm">content_copy</span>
                     Copiar código
                   </button>
                 </div>
               ) : (
-                <div className="w-full bg-white rounded-2xl p-6 shadow-sm border border-pink-100 text-sm text-[#775159]/60">
-                  Você poderá gerar o código nas Configurações → Família.
+                <div className="w-full bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-pink-100 dark:border-slate-700 text-sm text-[#775159]/60 dark:text-pink-200/60">
+                  Você poderá gerar o código nas Configurações.
                 </div>
               )}
 
-              <div className="bg-[#fff0f5] rounded-2xl p-4 text-left text-sm text-[#775159]/70 space-y-2 w-full">
-                <p className="font-bold text-[#775159]">Como funciona:</p>
-                <p>1. Seu filho baixa o BolsoCheio e cria uma conta</p>
-                <p>2. Ele digita o código acima no onboarding</p>
-                <p>3. As contas ficam vinculadas automaticamente</p>
+              <div className="bg-[#fff0f5] dark:bg-slate-800/50 rounded-2xl p-4 text-left text-sm text-[#775159]/70 dark:text-pink-200/70 space-y-2 w-full">
+                <p className="font-bold text-[#775159] dark:text-pink-200">Como funciona:</p>
+                <p>1. A pessoa baixa o BolsoCheio e cria uma conta</p>
+                <p>2. No início, escolhe "Vincular Conta"</p>
+                <p>3. Digita o código e as contas são vinculadas</p>
               </div>
 
               <button
-                onClick={handleParentSkip}
-                className="w-full py-5 rounded-full bg-[#775159] text-white font-headline font-extrabold text-lg shadow-[0_8px_0_#502e36] active:shadow-none active:translate-y-2 transition-all"
+                onClick={() => window.location.reload()}
+                className="w-full py-5 rounded-full bg-[#775159] dark:bg-pink-600 text-white font-headline font-extrabold text-lg shadow-[0_8px_0_#502e36] dark:shadow-[0_8px_0_#9f1239] active:shadow-none active:translate-y-2 transition-all"
               >
-                Ir para o App 🐷
+                Ir para o App
               </button>
             </motion.div>
           )}
 
-          {/* ── STEP 3B: FILHO INSERE TOKEN ── */}
-          {step === 'child-token' && (
+          {/* STEP 3B: Enter token to link */}
+          {step === 'supervised-token' && (
             <motion.div
-              key="child-token"
+              key="supervised-token"
               variants={slideVariants}
               initial="initial"
               animate="animate"
@@ -281,11 +267,11 @@ export function Onboarding() {
               <PiggyCharacter state="ok" size={100} showMessage={false} />
 
               <div className="space-y-2">
-                <h2 className="font-headline font-extrabold text-3xl text-amber-800">
-                  Código do Responsável
+                <h2 className="font-headline font-extrabold text-3xl text-blue-800 dark:text-blue-200">
+                  Código de Vínculo
                 </h2>
-                <p className="text-amber-700/70 text-sm font-medium">
-                  Peça o código de 8 letras para quem te cadastrou!
+                <p className="text-blue-700/70 dark:text-blue-300/70 text-sm font-medium">
+                  Digite o código fornecido pelo responsável
                 </p>
               </div>
 
@@ -294,9 +280,9 @@ export function Onboarding() {
                   type="text"
                   value={tokenInput}
                   onChange={e => setTokenInput(e.target.value.toUpperCase())}
-                  placeholder="XXXX-XXXX"
-                  maxLength={9}
-                  className="w-full text-center font-headline font-black text-3xl tracking-[0.25em] bg-white border-2 border-amber-200 rounded-2xl py-5 px-4 outline-none focus:border-amber-400 transition-colors uppercase text-amber-800"
+                  placeholder="XXXXXXXX"
+                  maxLength={10}
+                  className="w-full text-center font-headline font-black text-3xl tracking-[0.25em] bg-white dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-700 rounded-2xl py-5 px-4 outline-none focus:border-blue-400 transition-colors uppercase text-blue-800 dark:text-blue-200"
                   autoFocus
                 />
 
@@ -306,22 +292,22 @@ export function Onboarding() {
               </div>
 
               <button
-                onClick={handleLinkChild}
+                onClick={handleLinkToParent}
                 disabled={loading || tokenInput.length < 4}
-                className="w-full py-5 rounded-full bg-amber-700 text-white font-headline font-extrabold text-lg shadow-[0_8px_0_#92400e] active:shadow-none active:translate-y-2 transition-all disabled:opacity-50"
+                className="w-full py-5 rounded-full bg-blue-600 text-white font-headline font-extrabold text-lg shadow-[0_8px_0_#1e40af] active:shadow-none active:translate-y-2 transition-all disabled:opacity-50"
               >
                 {loading ? (
                   <span className="material-symbols-outlined animate-spin">sync</span>
                 ) : (
-                  'Vincular Conta 🔗'
+                  'Vincular Conta'
                 )}
               </button>
 
               <button
                 onClick={() => setStep('choose')}
-                className="text-amber-700/60 font-bold text-sm hover:text-amber-700 transition-colors"
+                className="text-blue-700/60 dark:text-blue-300/60 font-bold text-sm hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
               >
-                ← Voltar
+                Voltar
               </button>
             </motion.div>
           )}
@@ -331,17 +317,17 @@ export function Onboarding() {
 
       {/* Progress dots */}
       <div className="flex justify-center gap-2 pb-8 z-10">
-        {(['welcome', 'choose', step === 'parent-done' ? 'parent-done' : 'child-token'] as const).map((_s, i) => {
+        {[0, 1, 2].map((i) => {
           const current = step === 'welcome' ? 0 : step === 'choose' ? 1 : 2
           return (
             <div
               key={i}
               className={`rounded-full transition-all duration-300 ${
                 i === current
-                  ? 'w-6 h-2.5 bg-[#775159]'
+                  ? 'w-6 h-2.5 bg-[#775159] dark:bg-pink-400'
                   : i < current
-                  ? 'w-2.5 h-2.5 bg-[#775159]/40'
-                  : 'w-2.5 h-2.5 bg-[#775159]/20'
+                  ? 'w-2.5 h-2.5 bg-[#775159]/40 dark:bg-pink-400/40'
+                  : 'w-2.5 h-2.5 bg-[#775159]/20 dark:bg-pink-400/20'
               }`}
             />
           )

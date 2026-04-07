@@ -165,8 +165,7 @@ export interface UserProfile {
   telegram_chat_id: number | null
   is_telegram_verified: boolean
   envelopes: EnvelopeJson[]
-  children: ChildProfileJson[]
-  parent_pin: string | null
+  monthly_budget?: number
   theme: 'light' | 'dark' | 'system'
   account_type: AccountType
   parent_id: string | null

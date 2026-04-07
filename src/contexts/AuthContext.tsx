@@ -45,13 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', userId)
         .single()
 
-      if (error) {
-        console.error('Erro ao buscar profile:', error)
-        return null
-      }
+      if (error) return null
       return data as UserProfile
-    } catch (err) {
-      console.error('Erro de rede ao buscar profile:', err)
+    } catch {
       return null
     }
   }, [])
@@ -63,7 +59,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const safetyTimeout = setTimeout(() => {
-      console.warn('Auth timeout - forçando loading = false')
       resolveLoading()
     }, 4000)
 
@@ -73,9 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(newSession?.user ?? null)
 
         if (newSession?.user) {
-          fetchProfile(newSession.user.id).then((p) => {
-            setProfile(p)
-          })
+          fetchProfile(newSession.user.id).then(setProfile)
         } else {
           setProfile(null)
         }
@@ -91,12 +84,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(s)
         setUser(s?.user ?? null)
         if (s?.user) {
-          fetchProfile(s.user.id).then((p) => setProfile(p))
+          fetchProfile(s.user.id).then(setProfile)
         }
         resolveLoading()
       }
-    }).catch((err) => {
-      console.error('Erro em getSession:', err)
+    }).catch(() => {
       resolveLoading()
     })
 
@@ -160,24 +152,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(p)
   }, [user, fetchProfile])
 
-  // Determina se o onboarding é necessário
-  // Contas novas (sem account_type definido ou onboarding_completed = false)
   const needsOnboarding = Boolean(
-    user &&
-    isOnline &&
-    profile &&
-    !profile.onboarding_completed
+    user && isOnline && profile && !profile.onboarding_completed
   )
 
-  // Completa o onboarding: define account_type e opcionalmente vincula ao responsável
   const completeOnboarding = useCallback(async (
     accountType: AccountType,
     inviteToken?: string
   ): Promise<{ error: string | null }> => {
     if (!user) return { error: 'Usuário não autenticado' }
 
-    // Se for filho/teen e forneceu token → vincula via RPC
-    if ((accountType === 'child' || accountType === 'teen') && inviteToken) {
+    // If supervised user with invite token, link to parent
+    if (accountType === 'supervised' && inviteToken) {
       const { data, error } = await supabase.rpc('link_child_to_parent', {
         p_invite_token: inviteToken.trim().toUpperCase(),
       })
@@ -185,9 +171,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) return { error: error.message }
 
       const result = data as { success: boolean; error?: string }
-      if (!result.success) return { error: result.error ?? 'Erro ao vincular conta' }
+      if (!result.success) return { error: result.error ?? 'Código inválido ou expirado' }
 
-      // Atualiza account_type local
       await supabase
         .from('profiles')
         .update({ account_type: accountType, onboarding_completed: true })
@@ -197,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: null }
     }
 
-    // Responsável ou adulto: apenas marca onboarding como completo
+    // Regular adult user
     const updates: Partial<UserProfile> = {
       account_type: accountType,
       onboarding_completed: true,

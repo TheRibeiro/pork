@@ -7,15 +7,14 @@ import { vibrate } from '../../lib/utils'
 export function FamilySection() {
   const { profile } = useAuth()
   const {
-    isParent, isChild, isTeen,
+    isParent, isSupervised,
     inviteToken, generateToken,
-    children, loadingChildren, refreshChildren,
+    supervisedUsers, loadingSupervisedUsers, refreshSupervisedUsers,
+    parentName,
   } = useFamily()
 
   const [generatingToken, setGeneratingToken] = useState(false)
   const [copied, setCopied] = useState(false)
-
-  const accountType = profile?.account_type ?? 'adult'
 
   async function handleGenerateToken() {
     vibrate(20)
@@ -32,76 +31,71 @@ export function FamilySection() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // ─── FILHO / TEEN: vê o responsável vinculado ───
-  if (isChild || isTeen) {
-    const parentName = profile?.parent_id ? 'Responsável vinculado' : null
-
+  // Supervised user: show parent info
+  if (isSupervised) {
     return (
       <section className="space-y-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-            <span className="text-lg">👨‍👩‍👧</span>
+          <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center">
+            <span className="text-lg">🔗</span>
           </div>
-          <h3 className="font-headline font-bold text-xl text-[#775159]">Minha Família</h3>
+          <h3 className="font-headline font-bold text-xl text-[#775159] dark:text-pink-200">Supervisão</h3>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-outline-variant/20 space-y-3">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-pink-100 dark:border-slate-800 space-y-3">
           {profile?.parent_id ? (
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-2xl">
+              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-2xl">
                 ✅
               </div>
               <div>
-                <p className="font-bold text-on-surface">{parentName}</p>
-                <p className="text-xs text-on-surface-variant">Conta vinculada com sucesso</p>
+                <p className="font-bold text-[#775159] dark:text-pink-200">
+                  {parentName || 'Responsável vinculado'}
+                </p>
+                <p className="text-xs text-[#775159]/60 dark:text-pink-300/60">
+                  Sua conta está sendo supervisionada
+                </p>
               </div>
             </div>
           ) : (
             <div className="text-center py-4 space-y-2">
               <span className="text-3xl">🔗</span>
-              <p className="text-sm text-on-surface-variant font-medium">
+              <p className="text-sm text-[#775159]/70 dark:text-pink-300/70 font-medium">
                 Nenhum responsável vinculado ainda.
-              </p>
-              <p className="text-xs text-on-surface-variant">
-                Peça o código para seu responsável e insira em Configurações.
               </p>
             </div>
           )}
-
-          <div className="text-xs text-on-surface-variant/50 text-center pt-2 border-t border-outline-variant/10">
-            Tipo de conta: <span className="font-bold capitalize">{accountType === 'teen' ? 'Teen (Adolescente)' : 'Criança'}</span>
-          </div>
         </div>
       </section>
     )
   }
 
-  // ─── RESPONSÁVEL / ADULTO: gerencia filhos e token ───
+  // Parent: manage invite token and supervised users
+  if (!isParent) return null
+
   return (
     <section className="space-y-4">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center">
+        <div className="w-8 h-8 bg-pink-100 dark:bg-pink-900/30 rounded-full flex items-center justify-center">
           <span className="text-lg">👨‍👩‍👧</span>
         </div>
-        <h3 className="font-headline font-bold text-xl text-[#775159]">Família</h3>
-        {isParent && (
-          <button
-            onClick={refreshChildren}
-            className="ml-auto text-[#775159]/50 hover:text-[#775159] transition-colors"
-            title="Atualizar"
-          >
-            <span className="material-symbols-outlined text-lg">refresh</span>
-          </button>
-        )}
+        <h3 className="font-headline font-bold text-xl text-[#775159] dark:text-pink-200">Supervisão Familiar</h3>
+        <button
+          onClick={() => refreshSupervisedUsers()}
+          className="ml-auto text-[#775159]/50 dark:text-pink-300/50 hover:text-[#775159] dark:hover:text-pink-300 transition-colors"
+          title="Atualizar"
+        >
+          <span className="material-symbols-outlined text-lg">refresh</span>
+        </button>
       </div>
 
-      {/* Token de convite */}
-      <div className="bg-white rounded-2xl p-5 shadow-sm border border-outline-variant/20 space-y-4">
+      {/* Invite Token */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-pink-100 dark:border-slate-800 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-bold text-on-surface text-sm">Código de Convite</p>
-            <p className="text-xs text-on-surface-variant mt-0.5">
-              Compartilhe com seus filhos para vincular as contas
+            <p className="font-bold text-[#775159] dark:text-pink-200 text-sm">Código de Convite</p>
+            <p className="text-xs text-[#775159]/60 dark:text-pink-300/60 mt-0.5">
+              Compartilhe para vincular contas
             </p>
           </div>
           <span className="text-2xl">🔑</span>
@@ -109,15 +103,17 @@ export function FamilySection() {
 
         {inviteToken ? (
           <div className="flex items-center gap-3">
-            <div className="flex-1 bg-[#fff0f5] border-2 border-dashed border-pink-200 rounded-xl py-3 px-4">
-              <span className="font-headline font-black text-2xl tracking-[0.2em] text-[#775159]">
+            <div className="flex-1 bg-pink-50 dark:bg-slate-800 border-2 border-dashed border-pink-200 dark:border-pink-800 rounded-xl py-3 px-4">
+              <span className="font-headline font-black text-2xl tracking-[0.2em] text-[#775159] dark:text-pink-200">
                 {inviteToken}
               </span>
             </div>
             <button
               onClick={handleCopy}
               className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-                copied ? 'bg-green-100 text-green-600' : 'bg-pink-100 text-[#775159] hover:bg-pink-200'
+                copied
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                  : 'bg-pink-100 dark:bg-pink-900/30 text-[#775159] dark:text-pink-300 hover:bg-pink-200 dark:hover:bg-pink-800/30'
               }`}
             >
               <span className="material-symbols-outlined text-xl">
@@ -129,7 +125,7 @@ export function FamilySection() {
           <button
             onClick={handleGenerateToken}
             disabled={generatingToken}
-            className="w-full py-3 rounded-xl bg-[#775159] text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#6a464d] transition-colors disabled:opacity-60"
+            className="w-full py-3 rounded-xl bg-[#775159] dark:bg-pink-600 text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#6a464d] dark:hover:bg-pink-700 transition-colors disabled:opacity-60"
           >
             {generatingToken ? (
               <span className="material-symbols-outlined animate-spin text-sm">sync</span>
@@ -144,7 +140,7 @@ export function FamilySection() {
           <button
             onClick={handleGenerateToken}
             disabled={generatingToken}
-            className="w-full text-xs text-on-surface-variant/60 hover:text-on-surface-variant transition-colors flex items-center justify-center gap-1"
+            className="w-full text-xs text-[#775159]/50 dark:text-pink-300/50 hover:text-[#775159]/80 dark:hover:text-pink-300/80 transition-colors flex items-center justify-center gap-1"
           >
             <span className="material-symbols-outlined text-xs">autorenew</span>
             Regenerar código
@@ -152,40 +148,44 @@ export function FamilySection() {
         )}
       </div>
 
-      {/* Lista de filhos vinculados */}
-      <div className="bg-white rounded-2xl p-5 shadow-sm border border-outline-variant/20 space-y-3">
-        <p className="font-bold text-on-surface text-sm">Filhos Vinculados</p>
+      {/* Supervised Users List */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-pink-100 dark:border-slate-800 space-y-3">
+        <p className="font-bold text-[#775159] dark:text-pink-200 text-sm">Usuários Vinculados</p>
 
-        {loadingChildren ? (
+        {loadingSupervisedUsers ? (
           <div className="flex items-center justify-center py-6">
-            <span className="material-symbols-outlined animate-spin text-[#775159]">sync</span>
+            <span className="material-symbols-outlined animate-spin text-[#775159] dark:text-pink-300">sync</span>
           </div>
-        ) : children.length === 0 ? (
+        ) : supervisedUsers.length === 0 ? (
           <div className="text-center py-4 space-y-1">
-            <span className="text-3xl">🐣</span>
-            <p className="text-sm text-on-surface-variant font-medium">Nenhum filho vinculado ainda</p>
+            <span className="text-3xl">👥</span>
+            <p className="text-sm text-[#775159]/60 dark:text-pink-300/60 font-medium">
+              Nenhum usuário vinculado ainda
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {children.map((child) => (
+            {supervisedUsers.map((user) => (
               <motion.div
-                key={child.id}
+                key={user.id}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 p-3 bg-surface-container-lowest rounded-xl"
+                className="flex items-center gap-3 p-3 bg-pink-50 dark:bg-slate-800 rounded-xl"
               >
-                <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center text-xl">
-                  {child.account_type === 'teen' ? '🧑' : '🧒'}
+                <div className="w-10 h-10 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
+                  <span className="font-bold text-[#775159] dark:text-pink-200">
+                    {(user.full_name || user.email || '?').charAt(0).toUpperCase()}
+                  </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-on-surface truncate">
-                    {child.full_name || child.email?.split('@')[0] || 'Filho'}
+                  <p className="font-bold text-[#775159] dark:text-pink-200 truncate">
+                    {user.full_name || user.email?.split('@')[0] || 'Usuário'}
                   </p>
-                  <p className="text-xs text-on-surface-variant capitalize">
-                    {child.account_type === 'teen' ? 'Teen' : 'Criança'} • Vinculado
+                  <p className="text-xs text-[#775159]/50 dark:text-pink-300/50">
+                    Vinculado
                   </p>
                 </div>
-                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               </motion.div>
             ))}
           </div>

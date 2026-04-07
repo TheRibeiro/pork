@@ -1,154 +1,122 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
-import type { AccountType } from '../types'
 
-// Perfil resumido de um filho (usado pelo responsável)
-export interface ChildSummary {
+// Perfil resumido de um usuário supervisionado
+export interface SupervisedUser {
   id: string
   full_name: string | null
   email: string | null
-  account_type: AccountType
-  parent_id: string | null
 }
 
 interface FamilyContextType {
-  // Para responsáveis
-  children: ChildSummary[]
+  // Para responsáveis (quem gerou invite token)
+  supervisedUsers: SupervisedUser[]
   inviteToken: string | null
-  loadingChildren: boolean
+  loadingSupervisedUsers: boolean
   generateToken: () => Promise<string | null>
-  // Para qualquer tipo de conta
+  refreshSupervisedUsers: () => Promise<void>
+  // Para qualquer tipo
   isParent: boolean
-  isChild: boolean
-  isTeen: boolean
+  isSupervised: boolean
+  parentName: string | null
   // Sinalização de transações
   flagTransaction: (transactionId: string, note: string) => Promise<void>
   unflagTransaction: (transactionId: string) => Promise<void>
-  markFlagRead: (transactionId: string) => Promise<void>
-  // Contagem de flags não lidas (para filhos)
-  unreadFlagCount: number
-  refreshChildren: () => Promise<void>
 }
 
 const FamilyContext = createContext<FamilyContextType | null>(null)
 
-export function FamilyProvider({ children: reactChildren }: { children: ReactNode }) {
+export function FamilyProvider({ children }: { children: ReactNode }) {
   const { user, profile, isOnline } = useAuth()
 
-  const [children, setChildren] = useState<ChildSummary[]>([])
+  const [supervisedUsers, setSupervisedUsers] = useState<SupervisedUser[]>([])
   const [inviteToken, setInviteToken] = useState<string | null>(null)
-  const [loadingChildren, setLoadingChildren] = useState(false)
-  const [unreadFlagCount, setUnreadFlagCount] = useState(0)
+  const [loadingSupervisedUsers, setLoadingSupervisedUsers] = useState(false)
+  const [parentName, setParentName] = useState<string | null>(null)
 
   const accountType = profile?.account_type ?? 'adult'
-  const isParent = accountType === 'parent'
-  const isChild = accountType === 'child'
-  const isTeen = accountType === 'teen'
+  const isParent = accountType === 'adult' && Boolean(profile?.invite_token)
+  const isSupervised = accountType === 'supervised'
 
-  // Sincroniza invite_token do perfil
+  // Sync invite token
   useEffect(() => {
     if (profile?.invite_token) {
       setInviteToken(profile.invite_token)
     }
   }, [profile?.invite_token])
 
-  // Carrega filhos (somente responsável)
-  const refreshChildren = useCallback(async () => {
+  // Load parent name for supervised users
+  useEffect(() => {
+    async function loadParent() {
+      if (!isOnline || !user || !isSupervised || !profile?.parent_id) return
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', profile.parent_id)
+        .single()
+      if (data) setParentName(data.full_name)
+    }
+    loadParent()
+  }, [isOnline, user, isSupervised, profile?.parent_id])
+
+  // Load supervised users (for parents)
+  const refreshSupervisedUsers = useCallback(async () => {
     if (!isOnline || !user || !isParent) return
-    setLoadingChildren(true)
+    setLoadingSupervisedUsers(true)
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email, account_type, parent_id')
+        .select('id, full_name, email')
         .eq('parent_id', user.id)
 
       if (!error && data) {
-        setChildren(data as ChildSummary[])
+        setSupervisedUsers(data as SupervisedUser[])
       }
     } finally {
-      setLoadingChildren(false)
+      setLoadingSupervisedUsers(false)
     }
   }, [isOnline, user, isParent])
 
   useEffect(() => {
-    if (isParent) refreshChildren()
-  }, [isParent, refreshChildren])
+    if (isParent) refreshSupervisedUsers()
+  }, [isParent, refreshSupervisedUsers])
 
-  // Conta flags não lidas para filhos/teens
-  useEffect(() => {
-    if (!isOnline || !user || (!isChild && !isTeen)) return
-
-    async function countUnread() {
-      const { count } = await supabase
-        .from('transactions')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user!.id)
-        .eq('parent_flagged', true)
-        .eq('parent_flag_read', false)
-
-      setUnreadFlagCount(count ?? 0)
-    }
-
-    countUnread()
-
-    // Realtime: atualiza contagem quando flags mudam
-    const channel = supabase
-      .channel(`family-flags-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'transactions',
-          filter: `user_id=eq.${user.id}`,
-        },
-        () => { countUnread() }
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [isOnline, user, isChild, isTeen])
-
-  // Realtime para responsável: atualiza lista de filhos quando há alterações de perfil
+  // Realtime for new supervised users
   useEffect(() => {
     if (!isOnline || !user || !isParent) return
 
     const channel = supabase
-      .channel(`family-children-${user.id}`)
+      .channel(`family-supervised-${user.id}`)
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'profiles',
           filter: `parent_id=eq.${user.id}`,
         },
-        () => { refreshChildren() }
+        () => { refreshSupervisedUsers() }
       )
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [isOnline, user, isParent, refreshChildren])
+  }, [isOnline, user, isParent, refreshSupervisedUsers])
 
-  // Gera ou regenera token de convite
+  // Generate or regenerate invite token
   const generateToken = useCallback(async (): Promise<string | null> => {
     if (!isOnline || !user) return null
     try {
       const { data, error } = await supabase.rpc('generate_invite_token')
-      if (error) {
-        console.error('Erro ao gerar token:', error)
-        return null
-      }
+      if (error) return null
       setInviteToken(data as string)
       return data as string
-    } catch (err) {
-      console.error('Erro ao gerar token:', err)
+    } catch {
       return null
     }
   }, [isOnline, user])
 
-  // Sinaliza transação (responsável → filho)
+  // Flag a transaction (parent → supervised user)
   const flagTransaction = useCallback(async (transactionId: string, note: string) => {
     if (!isOnline) return
     await supabase
@@ -157,7 +125,7 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
       .eq('id', transactionId)
   }, [isOnline])
 
-  // Remove sinalização
+  // Unflag a transaction
   const unflagTransaction = useCallback(async (transactionId: string) => {
     if (!isOnline) return
     await supabase
@@ -166,35 +134,22 @@ export function FamilyProvider({ children: reactChildren }: { children: ReactNod
       .eq('id', transactionId)
   }, [isOnline])
 
-  // Filho marca flag como lida
-  const markFlagRead = useCallback(async (transactionId: string) => {
-    if (!isOnline) return
-    await supabase
-      .from('transactions')
-      .update({ parent_flag_read: true })
-      .eq('id', transactionId)
-
-    setUnreadFlagCount(prev => Math.max(0, prev - 1))
-  }, [isOnline])
-
   return (
     <FamilyContext.Provider
       value={{
-        children,
+        supervisedUsers,
         inviteToken,
-        loadingChildren,
+        loadingSupervisedUsers,
         generateToken,
+        refreshSupervisedUsers,
         isParent,
-        isChild,
-        isTeen,
+        isSupervised,
+        parentName,
         flagTransaction,
         unflagTransaction,
-        markFlagRead,
-        unreadFlagCount,
-        refreshChildren,
       }}
     >
-      {reactChildren}
+      {children}
     </FamilyContext.Provider>
   )
 }
