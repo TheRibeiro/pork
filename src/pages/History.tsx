@@ -1,391 +1,193 @@
-import { useState, useMemo } from 'react'
-import { format, subMonths } from 'date-fns'
-import { Search, Download, ChevronLeft, ChevronRight, FileText, Repeat } from 'lucide-react'
-import { ComposedChart, Line, Area, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts'
-import { motion, AnimatePresence, type Variants } from 'framer-motion'
-import { Card } from '../components/ui/Card'
-import { Button } from '../components/ui/Button'
-import { EmptyState } from '../components/ui/EmptyState'
-import { ExpenseDetailsSheet } from '../components/expenses/ExpenseDetailsSheet'
+import { useState } from 'react'
 import { useApp } from '../contexts/AppContext'
-import type { Expense, PaymentMethod } from '../types'
-import {
-  calculateMonthSummary,
-  formatCurrency,
-  formatDate,
-  formatMonth,
-  getCurrentMonth,
-  exportToCSV,
-  downloadCSV,
-} from '../lib/utils'
-import { CATEGORY_CONFIG, PAYMENT_METHOD_LABELS } from '../types'
-
-const listVariants: Variants = {
-  animate: {
-    transition: {
-      staggerChildren: 0.05,
-    },
-  },
-}
-
-const itemVariants: Variants = {
-  initial: { opacity: 0, y: 10 },
-  animate: {
-    opacity: 1,
-    y: 0,
-    transition: { type: 'spring' as const, stiffness: 400, damping: 30 },
-  },
-  exit: { opacity: 0, x: 20, transition: { duration: 0.15 } },
-}
-
-const paymentColors: Record<PaymentMethod, { bg: string; border: string; text: string }> = {
-  credito: { bg: 'rgba(239, 68, 68, 0.1)', border: 'rgba(239, 68, 68, 0.2)', text: '#f87171' },
-  debito: { bg: 'rgba(59, 130, 246, 0.1)', border: 'rgba(59, 130, 246, 0.2)', text: '#60a5fa' },
-  pix: { bg: 'rgba(20, 184, 166, 0.1)', border: 'rgba(20, 184, 166, 0.2)', text: '#2dd4bf' },
-  dinheiro: { bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.2)', text: '#fbbf24' },
-}
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 export function History() {
-  const { expenses, deleteExpense, editExpense, theme } = useApp()
-  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
+  const { expenses } = useApp()
+  const [currentDate, setCurrentDate] = useState(new Date())
 
-  const summary = useMemo(
-    () => calculateMonthSummary(expenses, selectedMonth),
-    [expenses, selectedMonth]
-  )
+  const fmt = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
-  const filteredExpenses = useMemo(() => {
-    let filtered = expenses.filter((e) => {
-      const expMonth = e.billingMonth || e.date.slice(0, 7)
-      return expMonth === selectedMonth
-    })
+  const monthLabel = format(currentDate, 'MMMM yyyy', { locale: ptBR })
+  const monthLabelCap = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      filtered = filtered.filter(
-        (e) =>
-          e.title.toLowerCase().includes(q) ||
-          e.description?.toLowerCase().includes(q) ||
-          e.tags?.some((t) => t.includes(q.replace('#', '')))
-      )
-    }
-
-    return filtered.sort((a, b) => b.date.localeCompare(a.date))
-  }, [expenses, selectedMonth, searchQuery])
-
-  function navigateMonth(direction: -1 | 1) {
-    const [year, month] = selectedMonth.split('-').map(Number)
-    const date = new Date(year, month - 1, 1)
-    const newDate = direction === -1 ? subMonths(date, 1) : subMonths(date, -1)
-    setSelectedMonth(format(newDate, 'yyyy-MM'))
+  const prevMonth = () => {
+    const d = new Date(currentDate)
+    d.setMonth(d.getMonth() - 1)
+    setCurrentDate(d)
   }
 
-  function handleExport() {
-    const csv = exportToCSV(filteredExpenses)
-    downloadCSV(csv, `bolsocheio-${selectedMonth}.csv`)
+  const nextMonth = () => {
+    const d = new Date(currentDate)
+    d.setMonth(d.getMonth() + 1)
+    setCurrentDate(d)
   }
 
-  // Chart data
-  const chartData: { day: string; total: number }[] = summary.dailySpending.map((d) => ({
-    day: d.date.slice(8),
-    total: d.total,
-  }))
+  const filtered = expenses.filter((e) => {
+    const d = new Date(e.date)
+    return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear()
+  })
 
-  const maxSpendingDay = useMemo(() => {
-    if (chartData.length === 0) return null
-    return chartData.reduce((max, current) => (current.total > max.total ? current : max))
-  }, [chartData])
+  // Group by day
+  const grouped = filtered.reduce<Record<string, typeof expenses>>((acc, exp) => {
+    const key = format(new Date(exp.date), 'dd/MM/yyyy', { locale: ptBR })
+    if (!acc[key]) acc[key] = []
+    acc[key].push(exp)
+    return acc
+  }, {})
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div 
-          className="px-4 py-3 rounded-2xl shadow-xl"
-          style={{
-            backgroundColor: 'var(--bg-card)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'}`,
-          }}
-        >
-          <p className="text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>
-            {label} de {formatMonth(selectedMonth).split(' ')[0]}
-          </p>
-          <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-            {formatCurrency(payload[0].value)}
-          </p>
-        </div>
-      )
+  const sortedDays = Object.keys(grouped).sort((a, b) => {
+    const [da, ma, ya] = a.split('/').map(Number)
+    const [db, mb, yb] = b.split('/').map(Number)
+    return new Date(yb, mb - 1, db).getTime() - new Date(ya, ma - 1, da).getTime()
+  })
+
+  // Style rotation based on index to recreate the "scrapbook" sticker effect
+  const getRotation = (idx: number) => {
+    if (idx % 3 === 0) return 'rotate-1'
+    if (idx % 3 === 1) return '-rotate-1'
+    return 'rotate-2'
+  }
+
+  const getDayInfo = (dateStr: string) => {
+    const [d, m, y] = dateStr.split('/')
+    const date = new Date(Number(y), Number(m) - 1, Number(d))
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    
+    if (date.toDateString() === today.toDateString()) {
+      return { label: 'Hoje! ✨', badge: 'bg-tertiary-container text-on-tertiary-container', rot: '-rotate-6' }
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return { label: 'Ontem 🕰️', badge: 'bg-primary-container text-on-primary-container', rot: 'rotate-2' }
     }
-    return null
+    return { label: format(date, "dd MMM", { locale: ptBR }), badge: 'bg-secondary-container text-on-secondary-container', rot: 'rotate-1' }
+  }
+
+  const getIconData = (e: typeof expenses[0]) => {
+    switch (e.category) {
+      case 'alimentacao': return { icon: 'restaurant', iconAlt: 'icecream', bg: 'bg-secondary-fixed', text: 'text-on-secondary-fixed' }
+      case 'lazer': return { icon: 'movie', iconAlt: 'sports_esports', bg: 'bg-tertiary-container', text: 'text-on-tertiary-container' }
+      case 'transporte': return { icon: 'local_taxi', iconAlt: 'directions_bus', bg: 'bg-primary-container', text: 'text-on-primary-container' }
+      default: return { icon: 'shopping_bag', iconAlt: 'store', bg: 'bg-surface-container-highest', text: 'text-primary' }
+    }
   }
 
   return (
-    <div className="flex flex-col gap-4 pb-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-          Histórico
-        </h1>
-        <Button variant="ghost" size="sm" onClick={handleExport}>
-          <Download size={16} className="mr-1" />
-          CSV
-        </Button>
-      </div>
+    <div className="min-h-screen pb-32 bg-pattern font-body text-on-surface">
+      {/* TopAppBar */}
+      <header className="w-full top-0 sticky z-50 bg-[#fff4f6]/95 backdrop-blur-md shadow-[0_20px_40px_rgba(119,81,89,0.08)] flex items-center justify-between px-6 py-4">
+        <div className="flex items-center gap-3">
+          <span className="material-symbols-outlined text-[#775159] text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>savings</span>
+          <h1 className="font-headline font-bold text-2xl tracking-tight text-[#775159]">BolsoCheio</h1>
+        </div>
+        <div className="flex gap-4">
+          <button className="hover:scale-105 transition-transform duration-200 active:scale-95 text-[#775159]">
+            <span className="material-symbols-outlined text-2xl">search</span>
+          </button>
+        </div>
+      </header>
 
-      {/* Month Navigator */}
-      <div className="flex items-center justify-between">
-        <motion.button
-          onClick={() => navigateMonth(-1)}
-          whileTap={{ scale: 0.9 }}
-          className="p-2.5 rounded-xl transition-colors"
-          style={{ backgroundColor: 'var(--bg-input)' }}
-        >
-          <ChevronLeft size={22} style={{ color: 'var(--text-primary)' }} />
-        </motion.button>
-        <p
-          className="text-base font-semibold capitalize"
-          style={{ color: 'var(--text-primary)' }}
-        >
-          {formatMonth(selectedMonth)}
-        </p>
-        <motion.button
-          onClick={() => navigateMonth(1)}
-          whileTap={{ scale: 0.9 }}
-          className="p-2.5 rounded-xl transition-colors"
-          style={{ backgroundColor: 'var(--bg-input)' }}
-        >
-          <ChevronRight size={22} style={{ color: 'var(--text-primary)' }} />
-        </motion.button>
-      </div>
+      <main className="px-6 pt-10 max-w-2xl mx-auto">
+        {/* Title Section */}
+        <div className="mb-12 flex flex-col items-center text-center">
+          <div className="bg-secondary-container text-on-secondary-container px-6 py-2 rounded-full font-headline font-bold text-sm tracking-widest uppercase mb-4 shadow-sm">
+            Log de Aventuras
+          </div>
+          <h2 className="font-headline font-extrabold text-4xl text-primary tracking-tight">Onde o dinheiro viajou?</h2>
+        </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search
-          size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2"
-          style={{ color: 'var(--text-muted)' }}
-        />
-        <input
-          type="text"
-          placeholder="Buscar por título, descrição ou #tag..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
-          style={{
-            backgroundColor: 'var(--bg-input)',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--border-color)',
-          }}
-        />
-      </div>
+        {/* Chunky Navigation */}
+        <div className="flex justify-between items-center mb-10 px-4">
+          <button 
+            onClick={prevMonth}
+            className="bg-surface-container-lowest p-5 rounded-xl shadow-[0_8px_0_rgba(119,81,89,0.1)] active:translate-y-1 active:shadow-none transition-all text-primary"
+          >
+            <span className="material-symbols-outlined text-3xl font-bold">arrow_back_ios_new</span>
+          </button>
+          <div className="text-center">
+            <p className="font-headline font-bold text-lg text-on-surface">{monthLabelCap}</p>
+            <p className="text-on-surface-variant text-sm font-medium">{filtered.length} missões concluídas</p>
+          </div>
+          <button 
+            onClick={nextMonth}
+            className="bg-surface-container-lowest p-5 rounded-xl shadow-[0_8px_0_rgba(119,81,89,0.1)] active:translate-y-1 active:shadow-none transition-all text-primary"
+          >
+            <span className="material-symbols-outlined text-3xl font-bold">arrow_forward_ios</span>
+          </button>
+        </div>
 
-      {/* Chart */}
-      {chartData.length > 0 && (
-        <Card className="!p-0 overflow-hidden">
-          <div className="p-4 pb-0 flex items-start justify-between">
-            <div>
-              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                Evolução no Mês
-              </h3>
-              {maxSpendingDay && maxSpendingDay.total > 0 && (
-                <p className="text-xs font-medium mt-1" style={{ color: 'var(--text-muted)' }}>
-                  Pico: {formatCurrency(maxSpendingDay.total)} no dia {maxSpendingDay.day}
-                </p>
-              )}
+        {/* Scrapbook Sections */}
+        <div className="space-y-16">
+          {sortedDays.length === 0 ? (
+            <div className="mt-20 flex flex-col items-center text-center opacity-70">
+              <span className="text-5xl mb-4">🌪️</span>
+              <p className="text-lg font-bold text-primary">Nenhuma aventura aqui</p>
+            </div>
+          ) : (
+            sortedDays.map((dayStr, dayIdx) => {
+              const dayExpenses = grouped[dayStr]
+              const dayInfo = getDayInfo(dayStr)
+
+              return (
+                <section key={dayStr} className="relative mt-8">
+                  {/* Title Badge Sticker */}
+                  <div className={`absolute -left-4 -top-6 ${dayInfo.rot} ${dayInfo.badge} px-6 py-3 rounded-lg font-headline font-black text-xl shadow-lg z-10`}>
+                    {dayInfo.label}
+                  </div>
+                  
+                  <div className="grid gap-8 pt-8">
+                    {dayExpenses.map((exp, idx) => {
+                      const rotation = getRotation(idx + dayIdx)
+                      const ui = getIconData(exp)
+                      
+                      return (
+                        <div 
+                          key={exp.id} 
+                          className={`bg-surface-container-lowest p-6 rounded-xl shadow-[0_15px_30px_rgba(119,81,89,0.06)] border-4 border-white ${rotation} hover:rotate-0 transition-transform cursor-pointer relative overflow-hidden group`}
+                        >
+                          {/* Ghost background icon */}
+                          <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-110 transition-transform">
+                            <span className="material-symbols-outlined text-8xl">{ui.iconAlt}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-4 sm:gap-6 z-10 relative">
+                            <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full ${ui.bg} flex items-center justify-center border-4 border-dashed border-white/40 shrink-0`}>
+                              <span className={`material-symbols-outlined ${ui.text} text-3xl`} style={{ fontVariationSettings: "'FILL' 1" }}>
+                                {ui.icon}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-headline font-bold text-lg sm:text-xl text-on-surface truncate">{exp.description || exp.category}</h4>
+                              <p className="text-on-surface-variant font-medium text-xs sm:text-sm capitalize">{exp.category}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="font-headline font-black text-lg sm:text-2xl text-error">- {fmt(exp.amount)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </section>
+              )
+            })
+          )}
+        </div>
+
+        {/* Fun Sticker Decoration */}
+        {sortedDays.length > 0 && (
+          <div className="my-20 flex justify-center pb-20">
+            <div className="relative w-48 h-48 rounded-full border-8 border-dashed border-primary/20 flex items-center justify-center">
+              <span className="text-8xl animate-pulse">🐷</span>
+              <div className="absolute -right-4 top-0 bg-secondary px-4 py-2 rounded-full text-white font-black text-sm rotate-12 shadow-lg">
+                POUPADOR!
+              </div>
             </div>
           </div>
-          <div className="h-44 sm:h-56 mt-4 relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.2} />
-                    <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke={theme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="day"
-                  tick={{ fontSize: 10, fill: theme === 'dark' ? '#64748b' : '#94a3b8' }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickMargin={10}
-                  minTickGap={15}
-                />
-                <YAxis
-                  tick={{ fontSize: 10, fill: theme === 'dark' ? '#64748b' : '#94a3b8' }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v) => `R$${v}`}
-                />
-                <Tooltip 
-                  content={<CustomTooltip />} 
-                  cursor={{ fill: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }} 
-                />
-                <Bar 
-                  dataKey="total" 
-                  fill="url(#barGradient)" 
-                  radius={[4, 4, 0, 0]} 
-                  barSize={20}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="total"
-                  stroke="none"
-                  fill="url(#colorTotal)"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="total"
-                  stroke="var(--color-primary)"
-                  strokeWidth={3}
-                  dot={false}
-                  activeDot={{ 
-                    r: 6, 
-                    strokeWidth: 3, 
-                    stroke: 'var(--bg-card)', 
-                    fill: "var(--color-primary)" 
-                  }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-      )}
-
-      {/* Total */}
-      <motion.div
-        className="flex items-center justify-between p-3 rounded-xl"
-        style={{ backgroundColor: 'var(--bg-input)' }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-      >
-        <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          {filteredExpenses.length} gastos encontrados
-        </span>
-        <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-          {formatCurrency(filteredExpenses.reduce((s, e) => s + e.amount, 0))}
-        </span>
-      </motion.div>
-
-      {/* Expense List — Staggered Cascade (Manifesto §2) */}
-      <motion.div
-        className="flex flex-col gap-2"
-        variants={listVariants}
-        initial="initial"
-        animate="animate"
-      >
-        <AnimatePresence>
-          {filteredExpenses.map((expense) => {
-            const config = CATEGORY_CONFIG[expense.category]
-            const colors = paymentColors[expense.paymentMethod]
-            return (
-              <motion.div
-                key={expense.id}
-                layout
-                variants={itemVariants}
-                exit="exit"
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setSelectedExpense(expense)}
-                className="flex items-center gap-3 p-3.5 rounded-2xl transition-colors cursor-pointer"
-                style={{
-                  backgroundColor: 'var(--bg-card)',
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-                  border: '1px solid var(--border-color)',
-                }}
-              >
-                <div
-                  className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl shrink-0"
-                  style={{
-                    backgroundColor: config.color + '15',
-                    border: `1px solid ${config.color}20`
-                  }}
-                >
-                  {config.emoji}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p
-                    className="text-[15px] font-semibold truncate mb-0.5"
-                    style={{ color: 'var(--text-primary)' }}
-                  >
-                    {expense.title}
-                  </p>
-                  <p className="text-[11px] font-medium tracking-wide uppercase flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
-                    {formatDate(expense.date).substring(0, 5)} • {PAYMENT_METHOD_LABELS[expense.paymentMethod]}
-                    {expense.type === 'fixo' && ' • Fixo'}
-                    {expense.isRecurring && (
-                      <Repeat size={10} style={{ color: 'var(--color-primary)' }} />
-                    )}
-                  </p>
-                  {expense.tags && expense.tags.length > 0 && (
-                    <div className="flex gap-1 mt-1 flex-wrap">
-                      {expense.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-xs px-1.5 py-0.5 rounded"
-                          style={{
-                            backgroundColor: 'var(--color-primary)',
-                            color: 'white',
-                            opacity: 0.8,
-                          }}
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
-                  <div
-                    className="px-2.5 py-1 rounded-lg border flex items-center"
-                    style={{
-                      backgroundColor: colors.bg,
-                      borderColor: colors.border
-                    }}
-                  >
-                    <span
-                      className="text-xs font-bold"
-                      style={{ color: colors.text }}
-                    >
-                      -{formatCurrency(expense.amount).replace('R$', '').trim()}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            )
-          })}
-        </AnimatePresence>
-
-        {filteredExpenses.length === 0 && (
-          <EmptyState
-            icon={<FileText size={28} style={{ color: 'var(--color-primary)' }} />}
-            title="Nenhum gasto encontrado"
-            description="Tente alterar o mês ou os filtros de busca"
-          />
         )}
-      </motion.div>
-
-      <ExpenseDetailsSheet
-        expense={selectedExpense}
-        open={!!selectedExpense}
-        onClose={() => setSelectedExpense(null)}
-        onDelete={deleteExpense}
-        onSave={editExpense}
-      />
+      </main>
     </div>
   )
 }

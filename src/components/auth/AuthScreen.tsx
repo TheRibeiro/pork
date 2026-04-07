@@ -1,241 +1,169 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Lock, User, Eye, EyeOff, AtSign } from 'lucide-react'
-import { Button } from '../ui/Button'
+import { motion } from 'framer-motion'
 import { useAuth } from '../../contexts/AuthContext'
 
-const springTransition = {
-  type: 'spring' as const,
-  stiffness: 400,
-  damping: 30,
-}
-
 export function AuthScreen() {
-  const { signIn, signUp } = useAuth()
   const [isLogin, setIsLogin] = useState(true)
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  
+  const { signIn, signUp } = useAuth()
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    setSuccess(null)
     setLoading(true)
 
-    if (isLogin) {
-      const { error } = await signIn(username, password)
-      if (error) setError(error)
-    } else {
-      if (!fullName.trim()) {
-        setError('Informe seu nome')
-        setLoading(false)
-        return
+    try {
+      if (isLogin) {
+        const result = await signIn(email, password)
+        if (result.error) throw new Error(result.error)
+      } else {
+        const result = await signUp(email, password, fullName || 'Poupador')
+        if (result.error) throw new Error(result.error)
+        
+        // If registration successful, we can auto-login or just show a message.
+        // Assuming the auth context handles the user state change automatically on sign up.
       }
-      const { error } = await signUp(username, password, fullName.trim())
-      if (error) {
-        setError(error)
-      }
+    } catch (err: any) {
+      setError(err.message || 'Erro ao autenticar. Tente novamente.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
-    <div
-      className="min-h-dvh flex flex-col items-center justify-center px-6 relative"
-      style={{ backgroundColor: 'var(--bg-primary)' }}
-    >
-      {/* Background */}
-      <div className="ambient-glow" />
-      <div className="noise-overlay" />
+    <div className="min-h-dvh flex flex-col justify-center px-6 relative overflow-hidden bg-background selection:bg-primary-container">
+      {/* Decorative Blob */}
+      <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-primary-container rounded-full blur-3xl opacity-30 pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-72 h-72 bg-tertiary-container rounded-full blur-3xl opacity-30 pointer-events-none" />
 
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ ...springTransition, stiffness: 300 }}
-        className="w-full max-w-sm relative z-10"
-      >
-        {/* Logo */}
-        <div className="text-center mb-8">
+      <main className="w-full max-w-sm mx-auto z-10 space-y-10">
+        <div className="text-center space-y-4">
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ ...springTransition, delay: 0.1 }}
-            className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold"
-            style={{
-              background: 'linear-gradient(135deg, #14b8a6, #0d9488)',
-              boxShadow: '0 8px 32px rgba(20, 184, 166, 0.35)',
-            }}
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+            className="w-24 h-24 mx-auto rounded-[2.5rem] bg-surface-container-highest shadow-[0_20px_40px_rgba(119,81,89,0.15)] flex items-center justify-center -rotate-3"
           >
-            B$
+            <span className="material-symbols-outlined text-6xl text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
+              savings
+            </span>
           </motion.div>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-            BolsoCheio
-          </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
-            Finanças Inteligentes
-          </p>
+          
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <h1 className="font-headline font-extrabold text-4xl tracking-tight text-primary">BolsoCheio</h1>
+            <p className="text-on-surface-variant font-medium mt-2 text-sm uppercase tracking-widest">
+              Alimente o seu Cofre
+            </p>
+          </motion.div>
         </div>
 
-        {/* Toggle Login/Cadastro */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ ...springTransition, delay: 0.2 }}
-          className="flex rounded-xl p-1 mb-6"
-          style={{ backgroundColor: 'var(--bg-input)' }}
-        >
-          <button
-            onClick={() => { setIsLogin(true); setError(null); setSuccess(null) }}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              isLogin ? 'bg-[var(--color-primary)] text-white shadow-sm' : ''
-            }`}
-            style={!isLogin ? { color: 'var(--text-secondary)' } : undefined}
-          >
-            Entrar
-          </button>
-          <button
-            onClick={() => { setIsLogin(false); setError(null); setSuccess(null) }}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
-              !isLogin ? 'bg-[var(--color-primary)] text-white shadow-sm' : ''
-            }`}
-            style={isLogin ? { color: 'var(--text-secondary)' } : undefined}
-          >
-            Criar Conta
-          </button>
-        </motion.div>
-
-        {/* Form */}
-        <motion.form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
+          className="bg-surface-container-lowest p-8 rounded-[2rem] shadow-[0_20px_40px_-5px_rgba(119,81,89,0.1)] border-4 border-white"
         >
-          <AnimatePresence mode="wait">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <h2 className="font-headline font-bold text-xl text-on-surface mb-6">
+              {isLogin ? 'Bem-vindo de volta!' : 'Criar seu Cofre'}
+            </h2>
+
+            {error && (
+              <div className="p-4 rounded-xl bg-error-container text-on-error-container text-sm font-semibold border border-error/20">
+                {error}
+              </div>
+            )}
+
             {!isLogin && (
-              <motion.div
-                key="name"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={springTransition}
-              >
-                <div className="relative">
-                  <User
-                    size={18}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2"
-                    style={{ color: 'var(--text-muted)' }}
-                  />
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-primary ml-4">
+                  Seu Nome
+                </label>
+                <div className="bg-surface-container-low rounded-xl px-4 py-3 border border-outline-variant/30 flex items-center gap-3 focus-within:border-primary/50 transition-colors">
+                  <span className="material-symbols-outlined text-outline">person</span>
                   <input
                     type="text"
-                    placeholder="Seu nome completo"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
-                    style={{
-                      backgroundColor: 'var(--bg-input)',
-                      color: 'var(--text-primary)',
-                      border: '1px solid var(--border-color)',
-                    }}
+                    className="bg-transparent border-none outline-none w-full text-on-surface font-medium placeholder:text-on-surface-variant/40"
+                    placeholder="Como quer ser chamado?"
+                    required={!isLogin}
                   />
                 </div>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
 
-          <div className="relative">
-            <AtSign
-              size={18}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2"
-              style={{ color: 'var(--text-muted)' }}
-            />
-            <input
-              type="text"
-              placeholder="Nome de usuário"
-              value={username}
-              onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9._-]/g, ''))}
-              required
-              autoCapitalize="none"
-              autoCorrect="off"
-              className="w-full pl-11 pr-4 py-3.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
-              style={{
-                backgroundColor: 'var(--bg-input)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border-color)',
-              }}
-            />
-          </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-primary ml-4">
+                E-mail ou Usuário
+              </label>
+              <div className="bg-surface-container-low rounded-xl px-4 py-3 border border-outline-variant/30 flex items-center gap-3 focus-within:border-primary/50 transition-colors">
+                <span className="material-symbols-outlined text-outline">mail</span>
+                <input
+                  type="text"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="bg-transparent border-none outline-none w-full text-on-surface font-medium placeholder:text-on-surface-variant/40"
+                  placeholder="Seu usuário"
+                  required
+                />
+              </div>
+            </div>
 
-          <div className="relative">
-            <Lock
-              size={18}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2"
-              style={{ color: 'var(--text-muted)' }}
-            />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Sua senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full pl-11 pr-12 py-3.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
-              style={{
-                backgroundColor: 'var(--bg-input)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border-color)',
-              }}
-            />
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-primary ml-4">
+                Senha
+              </label>
+              <div className="bg-surface-container-low rounded-xl px-4 py-3 border border-outline-variant/30 flex items-center gap-3 focus-within:border-primary/50 transition-colors">
+                <span className="material-symbols-outlined text-outline">lock</span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-transparent border-none outline-none w-full text-on-surface font-medium placeholder:text-on-surface-variant/40"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+            </div>
+
             <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2"
+              type="submit"
+              disabled={loading}
+              className="w-full mt-8 py-4 rounded-full bg-primary text-on-primary font-headline font-extrabold text-lg shadow-[0_12px_20px_rgba(119,81,89,0.2),inset_0__2px_0_rgba(255,255,255,0.2)] active:shadow-[0_4px_10px_rgba(119,81,89,0.2)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex justify-center items-center h-16"
             >
-              {showPassword ? (
-                <EyeOff size={18} style={{ color: 'var(--text-muted)' }} />
+              {loading ? (
+                 <span className="material-symbols-outlined animate-spin" style={{ fontVariationSettings: "'FILL' 1" }}>
+                   sync
+                 </span>
+              ) : isLogin ? (
+                'Entrar no Cofre'
               ) : (
-                <Eye size={18} style={{ color: 'var(--text-muted)' }} />
+                'Criar Conta'
               )}
             </button>
+          </form>
+
+          <div className="mt-8 text-center text-sm font-medium text-on-surface-variant">
+            {isLogin ? 'Não tem uma conta? ' : 'Já tem uma conta? '}
+            <button
+              onClick={() => {
+                setIsLogin(!isLogin)
+                setError(null)
+              }}
+              className="text-primary font-bold hover:underline"
+              type="button"
+            >
+              {isLogin ? 'Criar agora' : 'Faça login'}
+            </button>
           </div>
-
-          {/* Error/Success */}
-          <AnimatePresence>
-            {error && (
-              <motion.p
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={springTransition}
-                className="text-xs text-red-500 text-center px-2"
-              >
-                {error}
-              </motion.p>
-            )}
-            {success && (
-              <motion.p
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={springTransition}
-                className="text-xs text-green-500 text-center px-2"
-              >
-                {success}
-              </motion.p>
-            )}
-          </AnimatePresence>
-
-          <Button type="submit" size="lg" className="w-full" disabled={loading}>
-            {loading ? 'Aguarde...' : isLogin ? 'Entrar' : 'Criar Conta'}
-          </Button>
-        </motion.form>
-      </motion.div>
+        </motion.div>
+      </main>
     </div>
   )
 }

@@ -361,6 +361,93 @@ function formatBRL(value: number): string {
   }).format(value)
 }
 
+// --- Detectar comando de relatório semanal ---
+function isRelatorioCommand(text: string): boolean {
+  return /relat[oó]rio/i.test(text) || /\/(relatorio|report)/i.test(text)
+}
+
+// --- Gerar e enviar relatório semanal para um usuário ---
+async function handleRelatorioSemanal(chatId: number, profileId: string, fullName: string) {
+  const supabase = getSupabaseAdmin()
+
+  const { data: userProfile } = await supabase
+    .from('profiles')
+    .select('envelopes')
+    .eq('id', profileId)
+    .single()
+
+  const d = new Date()
+  d.setDate(d.getDate() - 7)
+  const dateFrom = d.toISOString().split('T')[0]
+
+  const { data: transactions } = await supabase
+    .from('transactions')
+    .select('category,amount,title,date_transaction,payment_type')
+    .eq('user_id', profileId)
+    .gte('date_transaction', dateFrom)
+    .order('date_transaction', { ascending: false })
+
+  if (!transactions || transactions.length === 0) {
+    await sendTelegramMessage(chatId,
+      '📊 <b>Relatório Semanal — BolsoCheio</b>\n\n' +
+      '📭 Nenhuma transação nos últimos 7 dias.\n\n' +
+      'Registre gastos como:\n• "Gastei 45 no almoço no pix"'
+    )
+    return
+  }
+
+  const envelopes = Array.isArray(userProfile?.envelopes) ? userProfile.envelopes : []
+  const NOMES: Record<string, string> = {
+    alimentacao: 'Alimentação', transporte: 'Transporte', lazer: 'Lazer',
+    saude: 'Saúde', educacao: 'Educação', moradia: 'Moradia',
+    vestuario: 'Vestuário', assinaturas: 'Assinaturas', outros: 'Outros',
+  }
+  const fmt = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
+
+  const totalPorCat: Record<string, number> = {}
+  let totalGeral = 0
+  for (const t of transactions) {
+    totalPorCat[t.category] = (totalPorCat[t.category] || 0) + parseFloat(t.amount)
+    totalGeral += parseFloat(t.amount)
+  }
+
+  const nome = fullName?.split(' ')[0] || 'você'
+  const hoje = new Date()
+  const semAnt = new Date(hoje)
+  semAnt.setDate(semAnt.getDate() - 7)
+  const fmtData = (dt: Date) => dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+
+  const linhas = [
+    `📊 <b>Relatório Semanal — BolsoCheio</b>`,
+    `👤 ${nome} | ${fmtData(semAnt)} – ${fmtData(hoje)}`,
+    ``,
+    `💰 <b>Total gasto: ${fmt(totalGeral)}</b>`,
+    `📦 ${transactions.length} transação(ões)`,
+    ``,
+    `<b>Por categoria:</b>`,
+  ]
+
+  const catOrdenadas = Object.entries(totalPorCat).sort(([, a], [, b]) => b - a)
+  for (const [cat, total] of catOrdenadas) {
+    const env = envelopes.find((e: { category: string; limit?: number; limite?: number }) => e.category === cat)
+    const limite = env ? parseFloat(String(env.limit || env.limite || 0)) : 0
+    const nomeCat = NOMES[cat] || cat
+    if (limite > 0) {
+      const pct = (total / limite) * 100
+      const status = pct >= 100 ? '🔴' : pct >= 80 ? '🟡' : '🟢'
+      linhas.push(`${status} ${nomeCat}: ${fmt(total)} / ${fmt(limite)}`)
+    } else {
+      linhas.push(`• ${nomeCat}: ${fmt(total)}`)
+    }
+  }
+
+  const maior = transactions.reduce((a, b) => parseFloat(a.amount) > parseFloat(b.amount) ? a : b)
+  linhas.push(`\n💸 Maior gasto: <i>${maior.title}</i> (${fmt(parseFloat(maior.amount))})`)
+  linhas.push(`\n🗓 Até semana que vem, bons gastos! 💪`)
+
+  await sendTelegramMessage(chatId, linhas.join('\n'))
+}
+
 // --- Endpoint simplificado para testes via Postman ---
 async function handleTestEndpoint(body: { chat_id: number; message: string }) {
   const chatId = body.chat_id
@@ -499,7 +586,9 @@ Deno.serve(async (req: Request) => {
         'Eu uso IA para entender valor, categoria e forma de pagamento automaticamente! 🤖\n\n' +
         '<b>Comandos:</b>\n' +
         '/ajuda - Mostra esta mensagem\n' +
-        '/start - Vincular conta'
+        '/start - Vincular conta\n' +
+        '/relatorio - Ver relatório semanal\n' +
+        '(ou escreva "meu relatório semanal")'
       )
       return new Response('OK', { status: 200 })
     }
@@ -514,6 +603,12 @@ Deno.serve(async (req: Request) => {
         'Para usar o bot, vincule sua conta no app:\n' +
         '👉 Configurações > Telegram Bot'
       )
+      return new Response('OK', { status: 200 })
+    }
+
+    // --- Comando de relatório semanal ---
+    if (isRelatorioCommand(messageText)) {
+      await handleRelatorioSemanal(chatId, profile.id, profile.full_name)
       return new Response('OK', { status: 200 })
     }
 
